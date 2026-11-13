@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Jev Coffee Demo</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f8f5f2;
+    color: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: #2c1810;
+    color: #fff;
+    padding: 16px 20px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 18px;
+  }
+  .main {
+    flex: 1;
+    padding: 20px;
+    max-width: 480px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .order-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+  }
+  .field {
+    margin-bottom: 16px;
+  }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .field .value {
+    font-size: 22px;
+    font-weight: 600;
+    min-height: 28px;
+    transition: color 0.2s;
+  }
+  .field .value.updating {
+    color: #e67e22;
+  }
+  .risks {
+    margin-top: 12px;
+  }
+  .risk {
+    display: inline-block;
+    background: #fff3cd;
+    color: #856404;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    margin: 4px 4px 0 0;
+    font-weight: 500;
+  }
+  .risk.out {
+    background: #f8d7da;
+    color: #721c24;
+  }
+  .mic-area {
+    text-align: center;
+    margin-top: 20px;
+  }
+  #micBtn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: none;
+    background: #2c1810;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(44,24,16,0.3);
+    transition: transform 0.1s, background 0.2s;
+  }
+  #micBtn:active, #micBtn.listening {
+    background: #e74c3c;
+    transform: scale(0.95);
+  }
+  #transcript {
+    margin-top: 16px;
+    min-height: 60px;
+    font-size: 16px;
+    color: #444;
+    font-style: italic;
+    text-align: center;
+    padding: 12px;
+    background: #fff;
+    border-radius: 12px;
+  }
+  .hint {
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    margin-top: 8px;
+  }
+  .confirm {
+    width: 100%;
+    padding: 16px;
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 16px;
+    cursor: pointer;
+  }
+  .confirm:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+<header>Jev Coffee · Live Order</header>
+<div class="main">
+  <div class="order-card">
+    <div class="field">
+      <label>Drink</label>
+      <div class="value" id="drink">—</div>
+    </div>
+    <div class="field">
+      <label>Size</label>
+      <div class="value" id="size">—</div>
+    </div>
+    <div class="field">
+      <label>Milk</label>
+      <div class="value" id="milk">—</div>
+    </div>
+    <div class="field">
+      <label>Extras</label>
+      <div class="value" id="extras">—</div>
+    </div>
+    <div class="risks" id="risks"></div>
+  </div>
+
+  <div class="mic-area">
+    <button id="micBtn">🎤</button>
+    <div id="transcript">Tap the mic and order out loud…</div>
+    <div class="hint">Try: “Large oat latte, extra shot, and a croissant if you have it”</div>
+  </div>
+
+  <button class="confirm" id="confirmBtn" disabled>Confirm Order</button>
+</div>
+
+<script>
+const drinkEl = document.getElementById('drink');
+const sizeEl = document.getElementById('size');
+const milkEl = document.getElementById('milk');
+const extrasEl = document.getElementById('extras');
+const risksEl = document.getElementById('risks');
+const transcriptEl = document.getElementById('transcript');
+const micBtn = document.getElementById('micBtn');
+const confirmBtn = document.getElementById('confirmBtn');
+
+let recognition;
+let isListening = false;
+let fullTranscript = '';
+
+const stock = {
+  oat: true,
+  almond: true,
+  soy: false,
+  croissant: false,
+  muffin: true,
+  extraShot: true
+};
+
+function updateUI(order) {
+  const fields = [
+    { el: drinkEl, key: 'drink' },
+    { el: sizeEl, key: 'size' },
+    { el: milkEl, key: 'milk' },
+    { el: extrasEl, key: 'extras' }
+  ];
+  fields.forEach(f => {
+    const val = order[f.key] || '—';
+    if (f.el.textContent !== val) {
+      f.el.textContent = val;
+      f.el.classList.add('updating');
+      setTimeout(() => f.el.classList.remove('updating'), 400);
+    }
+  });
+
+  risksEl.innerHTML = '';
+  (order.risks || []).forEach(r => {
+    const span = document.createElement('span');
+    span.className = 'risk' + (r.severity === 'out' ? ' out' : '');
+    span.textContent = r.message;
+    risksEl.appendChild(span);
+  });
+
+  confirmBtn.disabled = !order.drink;
+}
+
+function parseSpeech(text) {
+  const t = text.toLowerCase();
+  const order = { risks: [] };
+
+  if (t.includes('latte')) order.drink = 'Latte';
+  else if (t.includes('cappuccino') || t.includes('cap')) order.drink = 'Cappuccino';
+  else if (t.includes('flat white')) order.drink = 'Flat White';
+  else if (t.includes('espresso')) order.drink = 'Espresso';
+  else if (t.includes('americano')) order.drink = 'Americano';
+  else if (t.includes('mocha')) order.drink = 'Mocha';
+  else if (t.includes('long black')) order.drink = 'Long Black';
+
+  if (t.includes('large') || t.includes('big') || t.includes('grande')) order.size = 'Large';
+  else if (t.includes('medium') || t.includes('regular')) order.size = 'Medium';
+  else if (t.includes('small') || t.includes('short')) order.size = 'Small';
+  else order.size = order.size || 'Medium';
+
+  if (t.includes('oat')) order.milk = 'Oat';
+  else if (t.includes('almond')) order.milk = 'Almond';
+  else if (t.includes('soy')) order.milk = 'Soy';
+  else if (t.includes('skim') || t.includes('low fat')) order.milk = 'Skim';
+  else if (t.includes('full cream') || t.includes('regular milk') || t.includes('dairy')) order.milk = 'Full cream';
+  else if (t.includes('no milk') || t.includes('black')) order.milk = 'None';
+
+  const extras = [];
+  if (t.includes('extra shot') || t.includes('double shot')) extras.push('Extra shot');
+  if (t.includes('croissant')) extras.push('Croissant');
+  if (t.includes('muffin')) extras.push('Muffin');
+  if (t.includes('syrup') || t.includes('vanilla')) extras.push('Vanilla syrup');
+  order.extras = extras.length ? extras.join(', ') : 'None';
+
+  if (order.milk === 'Oat' && !stock.oat) order.risks.push({ message: 'Oat milk low – almond suggested', severity: 'warn' });
+  if (order.milk === 'Soy' && !stock.soy) order.risks.push({ message: 'Soy milk out of stock', severity: 'out' });
+  if (extras.includes('Croissant') && !stock.croissant) order.risks.push({ message: 'Croissant unavailable – try muffin', severity: 'out' });
+  if (extras.includes('Extra shot') && !stock.extraShot) order.risks.push({ message: 'Extra shots temporarily limited', severity: 'warn' });
+
+  return order;
+}
+
+function processTranscript(text) {
+  transcriptEl.textContent = text || 'Listening…';
+  if (!text) return;
+  const order = parseSpeech(text);
+  updateUI(order);
+}
+
+function initRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    transcriptEl.textContent = 'Speech recognition not supported in this browser.';
+    return null;
+  }
+  const rec = new SpeechRecognition();
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.lang = 'en-AU';
+
+  rec.onresult = (e) => {
+    let interim = '';
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const transcript = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += transcript;
+      else interim += transcript;
+    }
+    fullTranscript = (fullTranscript + ' ' + final).trim();
+    processTranscript((fullTranscript + ' ' + interim).trim());
+  };
+
+  rec.onend = () => {
+    if (isListening) {
+      try { rec.start(); } catch (err) {}
+    }
+  };
+
+  rec.onerror = (e) => {
+    console.error(e);
+    if (e.error === 'not-allowed') {
+      transcriptEl.textContent = 'Microphone permission needed.';
+    }
+  };
+
+  return rec;
+}
+
+micBtn.addEventListener('click', () => {
+  if (!recognition) recognition = initRecognition();
+  if (!recognition) return;
+
+  if (isListening) {
+    isListening = false;
+    recognition.stop();
+    micBtn.classList.remove('listening');
+    micBtn.textContent = '🎤';
+  } else {
+    isListening = true;
+    fullTranscript = '';
+    try {
+      recognition.start();
+      micBtn.classList.add('listening');
+      micBtn.textContent = '⏹️';
+      transcriptEl.textContent = 'Listening…';
+    } catch (e) {
+      console.error(e);
+    }
+  }
+});
+
+confirmBtn.addEventListener('click', () => {
+  alert('Order confirmed!\n\n' + 
+    drinkEl.textContent + ' · ' + sizeEl.textContent + '\n' +
+    'Milk: ' + milkEl.textContent + '\n' +
+    'Extras: ' + extrasEl.textContent);
+  fullTranscript = '';
+  processTranscript('');
+  transcriptEl.textContent = 'Order placed. Tap mic for another.';
+});
+</script>
+</body>
+</html>
