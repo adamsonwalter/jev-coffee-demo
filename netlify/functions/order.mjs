@@ -42,8 +42,9 @@ async function callSystemOne(args) {
 }
 
 const yn = (yes, no) => ({ type: "choice", criteria: { yes, no } });
+const ch = (criteria) => ({ type: "choice", criteria });
 
-const QUESTIONS = {
+const COFFEE = {
   drink: {
     type: "choice",
     criteria: {
@@ -84,6 +85,44 @@ const QUESTIONS = {
   syrup: yn("Customer asks for a syrup such as vanilla or caramel", "No syrup requested"),
 };
 
+
+const QUOTE = {
+  trade: ch({ Plumbing: "Plumbing, drains, hot water, taps", Electrical: "Electrical, wiring, switchboard, lighting", Painting: "Painting or plastering", Bathroom: "Bathroom, kitchen or tiling renovation", Roofing: "Roof, gutters, leaks from above", Carpentry: "Carpentry, decking, framing, doors", Landscaping: "Landscaping, fencing, concreting", Other: "Anything else or unclear" }),
+  scope: ch({ Small: "Under one day of work", Medium: "Between two and five days of work", Large: "A week or more of work, or a full renovation" }),
+  access: ch({ Easy: "Easy access, empty site, any hours", Restricted: "Restricted access: strata, limited hours, tight space, occupied home, weekends only", Unknown: "Access not mentioned" }),
+  old_building: yn("Building is old (pre-1990), or fibro, asbestos, old wiring or lead paint is mentioned", "No sign of an old building"),
+  hidden_risk: yn("Leak, damp, rot, termites, cracks or unknown conditions behind walls or under floors are mentioned", "No hidden-damage signals"),
+  permit: yn("Work likely needs a permit, certifier or licensed sign-off (structural, gas, electrical, plumbing, removing walls)", "Unlikely to need a permit"),
+  materials: ch({ Customer: "Customer supplies materials", Contractor: "Contractor supplies materials", Unspecified: "Not mentioned" }),
+  urgency: ch({ Emergency: "Emergency: active leak, no power, unsafe, needs attention today", Soon: "Wanted within the next week or two", Flexible: "Flexible timing" }),
+};
+
+const DESK = {
+  reason: ch({ Checkup: "Routine check-up or review", Injury: "New injury, pain or illness", Followup: "Follow-up on an existing issue", Repeat: "Repeat prescription or referral", Results: "Test results", Other: "Anything else or unclear" }),
+  urgency: ch({ Routine: "Routine, can wait a week or more", Soon: "Should be seen within a few days", Urgent: "Needs to be seen today" }),
+  red_flag: yn("Mentions chest pain, trouble breathing, stroke signs, severe bleeding, fainting, severe allergic reaction, or thoughts of self-harm", "No emergency symptoms mentioned"),
+  patient: ch({ New: "New patient, first visit", Existing: "Existing patient", Unspecified: "Not mentioned" }),
+  day: ch({ Today: "Today", Tomorrow: "Tomorrow", ThisWeek: "Later this week", NextWeek: "Next week or later", Unspecified: "No day mentioned" }),
+  time: ch({ Morning: "Morning", Afternoon: "Afternoon", Evening: "After work or evening", Unspecified: "No time preference" }),
+};
+
+const SALES = {
+  interest: ch({ Hot: "Buyer is keen and engaged, asking about next steps or price", Warm: "Interested but not committed", Cold: "Little interest or polite brush-off" }),
+  budget: ch({ Confirmed: "Budget confirmed or approved", Vague: "Budget discussed only vaguely", TooHigh: "Buyer says it is too expensive", NotDiscussed: "Budget not discussed" }),
+  timeline: ch({ Now: "Wants to move this month", Quarter: "Within about three months", Later: "Later, no date, or just exploring" }),
+  decision_maker: ch({ Yes: "Spoke with the decision maker", No: "Needs sign-off from someone else", Unknown: "Not clear who decides" }),
+  competitor: yn("A competitor or alternative is mentioned", "No competitor mentioned"),
+  stall: yn("Buyer hesitates, delays, goes quiet, or says they will think about it", "No stalling signals"),
+  next_step: ch({ Proposal: "Send a proposal or quote", Demo: "Book a demo or meeting", Call: "Follow-up call", None: "No next step agreed" }),
+};
+
+const SETS = {
+  coffee: { q: COFFEE, ctx: "Customer speaking a coffee order at a cafe counter." },
+  quote: { q: QUOTE, ctx: "A tradesperson dictating a job description for a quote. Judge only what is said." },
+  desk: { q: DESK, ctx: "A patient speaking to a clinic receptionist to book an appointment." },
+  sales: { q: SALES, ctx: "A salesperson dictating notes after a customer call." },
+};
+
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -94,42 +133,27 @@ export default async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   if (!GATEWAY) return json({ error: "no_gateway" }, 503);
 
-  let transcript = "";
+  let transcript = "", demo = "coffee";
   try {
-    ({ transcript } = await req.json());
+    ({ transcript, demo = "coffee" } = await req.json());
   } catch {}
-  transcript = String(transcript || "").trim().slice(0, 600);
+  transcript = String(transcript || "").trim().slice(0, 900);
+  const set = SETS[demo];
+  if (!set) return json({ error: "unknown_demo" }, 400);
   if (!transcript) return json({ error: "empty" }, 400);
 
   const t0 = Date.now();
   let data;
   try {
-    data = await callSystemOne({
-      model: MODEL,
-      state: { transcript, context: "Customer speaking a coffee order at a cafe counter." },
-      questions: QUESTIONS,
-    });
+    data = await callSystemOne({ model: MODEL, state: { transcript, context: set.ctx }, questions: set.q });
   } catch (e) {
     return json({ error: String(e.message || e) }, 502);
   }
-  const a = data.answers || {};
-  const pick = (k) => (a[k] ? { value: a[k].choice, confidence: a[k].confidence ?? null } : null);
-  const flag = (k) => (a[k] && a[k].choice === "yes" ? { confidence: a[k].confidence ?? null } : null);
-
-  return json({
-    engine: "jev",
-    model: data.model,
-    ms: Date.now() - t0,
-    drink: pick("drink"),
-    size: pick("size"),
-    milk: pick("milk"),
-    extras: {
-      extra_shot: flag("extra_shot"),
-      croissant: flag("croissant"),
-      muffin: flag("muffin"),
-      syrup: flag("syrup"),
-    },
-  });
+  const fields = {};
+  for (const [k, v] of Object.entries(data.answers || {})) {
+    fields[k] = { value: v.choice, confidence: v.confidence ?? null, p: v.probabilities || null };
+  }
+  return json({ engine: "jev", model: data.model, ms: Date.now() - t0, fields });
 };
 
 export const config = { path: "/api/order" };
