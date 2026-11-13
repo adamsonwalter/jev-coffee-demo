@@ -211,6 +211,7 @@ async function interpret(text, mySeq) {
 // ---------- render ----------
 function render(f) {
   const out = demo.render(f);
+  if (!out.rows.some((r) => r && r[0]) && !(out.flags || []).length) out.flags = [{ m: 'Heard you, but no order details yet. Keep talking.', s: 'warn' }];
   lastRender = out;
   [...rowsEl.children].forEach((row, i) => {
     const n = row.querySelector('.v'), [val, lowConf] = out.rows[i] || [];
@@ -256,7 +257,7 @@ function stopUI() { listening = false; micBtn.classList.remove('on'); micHint.te
 function startListening() {
   if (noVoice()) { say(isIOS && standalone ? 'iPhone doesn’t allow voice inside home-screen apps. Open this page in Safari to talk.' : 'This browser has no speech recognition. Use Safari or Chrome.', 'err'); return; }
   rec = new SR(); rec.lang = 'en-AU'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
-  finalText = ''; gotAny = false;
+  finalText = ''; gotAny = false; if (window.Steve) Steve.reset();
   rec.onstart = () => { micBtn.classList.add('on'); micHint.textContent = 'Listening… tap to stop'; say('Listening…', 'idle'); };
   rec.onresult = (e) => {
     gotAny = true; let interim = '';

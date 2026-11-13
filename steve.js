@@ -3,7 +3,8 @@
 (function () {
   const TRIGGER = /\b(dachshunds?|sausage[ -]?dogs?|wiener[ -]?dogs?|weiner[ -]?dogs?|doxie)\b/i;
   const COOLDOWN = 7000;
-  let last = 0;
+  let last = 0, seen = 0;
+  const TRIGGER_G = new RegExp(TRIGGER.source, 'gi');
 
   const SVG = `
 <svg viewBox="0 0 230 120" width="230" height="120" aria-hidden="true">
@@ -77,13 +78,17 @@
   }
 
   window.Steve = {
+    // Fires only when a NEW mention appears, so a transcript that still contains the word never re-triggers him.
     check(text) {
-      if (!text || !TRIGGER.test(text)) return false;
+      if (!text) return false;
+      const n = (text.match(TRIGGER_G) || []).length;
+      if (n <= seen) return false;
+      seen = n;
       const now = Date.now();
       if (now - last < COOLDOWN) return false;
       last = now; run(); return true;
     },
-    reset() { last = 0; },
+    reset() { last = 0; seen = 0; },
     run,
   };
 })();
