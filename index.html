@@ -2,332 +2,345 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Jev Coffee Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jev Coffee</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Jev Coffee">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a0c06">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="Speak your coffee order. Jev fills it in live.">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+
 <style>
-  * { box-sizing: border-box; }
+  :root {
+    --bg: #1a0c06;
+    --bg2: #2a140a;
+    --panel: #34190d;
+    --line: #5a3322;
+    --cream: #faeed6;
+    --amber: #ffb040;
+    --amber-soft: #ffd88a;
+    --ink: #f3e3c6;
+    --dim: #c9a98a;
+    --ok: #8fd694;
+    --warn: #ffc65c;
+    --out: #ff8a78;
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); }
   body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #f8f5f2;
-    color: #1a1a1a;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", "Trebuchet MS", sans-serif;
+    color: var(--ink);
+    background: radial-gradient(120% 70% at 50% 0%, #4a2412 0%, var(--bg) 62%);
+    background-attachment: fixed;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+    padding: calc(var(--sat) + 14px) 18px calc(var(--sab) + 18px);
+    display: flex; flex-direction: column; min-height: 100%;
   }
-  header {
-    background: #2c1810;
-    color: #fff;
-    padding: 16px 20px;
-    text-align: center;
-    font-weight: 600;
-    font-size: 18px;
+  .wrap { width: 100%; max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; gap: 16px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; }
+  h1 { font: 600 26px/1 ui-serif, "New York", Georgia, serif; margin: 0; color: var(--cream); letter-spacing: .2px; }
+  h1 span { color: var(--amber); font-style: italic; }
+  .engine {
+    font-size: 12px; padding: 6px 10px; border-radius: 99px; border: 1px solid var(--line);
+    color: var(--dim); display: flex; gap: 6px; align-items: center; white-space: nowrap;
   }
-  .main {
-    flex: 1;
-    padding: 20px;
-    max-width: 480px;
-    margin: 0 auto;
-    width: 100%;
+  .engine i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); display: block; }
+  .engine.jev { color: var(--cream); border-color: #7a5230; }
+  .engine.jev i { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .engine.busy i { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse .7s infinite alternate; }
+  @keyframes pulse { to { opacity: .25; } }
+
+  .ticket { background: linear-gradient(180deg, var(--panel), var(--bg2)); border: 1px solid var(--line); border-radius: 22px; padding: 6px 18px 14px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 13px 0; border-bottom: 1px dashed var(--line); gap: 12px; }
+  .row:last-of-type { border-bottom: none; }
+  .row label { font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim); }
+  .row .v { font: 600 22px/1.15 ui-serif, "New York", Georgia, serif; color: var(--cream); text-align: right; transition: color .25s; }
+  .row .v.empty { color: #7b5a45; font-weight: 400; }
+  .row .v.flash { color: var(--amber); }
+  .row .v small { display: block; font: 12px ui-rounded, sans-serif; color: var(--warn); margin-top: 2px; }
+  .risks { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+  .risk { font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 99px; background: rgba(255,198,92,.14); color: var(--warn); border: 1px solid rgba(255,198,92,.35); }
+  .risk.out { background: rgba(255,138,120,.14); color: var(--out); border-color: rgba(255,138,120,.4); }
+  .risk.ok { background: rgba(143,214,148,.12); color: var(--ok); border-color: rgba(143,214,148,.35); }
+
+  .say { text-align: center; min-height: 64px; display: flex; align-items: center; justify-content: center; padding: 0 6px; font: italic 18px/1.35 ui-serif, Georgia, serif; color: var(--amber-soft); }
+  .say.idle { color: var(--dim); font-size: 16px; }
+  .say.err { color: var(--out); font-style: normal; font-size: 15px; font-family: ui-rounded, sans-serif; }
+
+  .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  #mic {
+    position: relative; width: 92px; height: 92px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+    background: radial-gradient(circle at 35% 28%, #ffd88a, var(--amber) 55%, #d98615);
+    box-shadow: 0 10px 30px rgba(255,176,64,.3), inset 0 -4px 10px rgba(120,60,0,.35);
+    display: grid; place-items: center; touch-action: manipulation;
+    transition: transform .12s;
   }
-  .order-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
+  #mic:active { transform: scale(.94); }
+  #mic svg { width: 38px; height: 38px; fill: #2a140a; }
+  #mic.on { background: radial-gradient(circle at 35% 28%, #ffb09f, #f0604a 60%, #c23a28); box-shadow: 0 0 0 0 rgba(240,96,74,.55); animation: ring 1.4s infinite; }
+  @keyframes ring { 70% { box-shadow: 0 0 0 26px rgba(240,96,74,0); } 100% { box-shadow: 0 0 0 0 rgba(240,96,74,0); } }
+  .mic-hint { font-size: 13px; color: var(--dim); }
+
+  .typebox { display: flex; gap: 8px; }
+  .typebox input {
+    flex: 1; min-width: 0; font: 16px ui-rounded, sans-serif; /* 16px stops iOS zoom */
+    color: var(--cream); background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px;
+    -webkit-user-select: text; user-select: text; outline: none;
   }
-  .field {
-    margin-bottom: 16px;
-  }
-  .field label {
-    display: block;
-    font-size: 13px;
-    color: #666;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .field .value {
-    font-size: 22px;
-    font-weight: 600;
-    min-height: 28px;
-    transition: color 0.2s;
-  }
-  .field .value.updating {
-    color: #e67e22;
-  }
-  .risks {
-    margin-top: 12px;
-  }
-  .risk {
-    display: inline-block;
-    background: #fff3cd;
-    color: #856404;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    margin: 4px 4px 0 0;
-    font-weight: 500;
-  }
-  .risk.out {
-    background: #f8d7da;
-    color: #721c24;
-  }
-  .mic-area {
-    text-align: center;
-    margin-top: 20px;
-  }
-  #micBtn {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    border: none;
-    background: #2c1810;
-    color: #fff;
-    font-size: 28px;
-    cursor: pointer;
-    box-shadow: 0 6px 20px rgba(44,24,16,0.3);
-    transition: transform 0.1s, background 0.2s;
-  }
-  #micBtn:active, #micBtn.listening {
-    background: #e74c3c;
-    transform: scale(0.95);
-  }
-  #transcript {
-    margin-top: 16px;
-    min-height: 60px;
-    font-size: 16px;
-    color: #444;
-    font-style: italic;
-    text-align: center;
-    padding: 12px;
-    background: #fff;
-    border-radius: 12px;
-  }
-  .hint {
-    font-size: 13px;
-    color: #888;
-    text-align: center;
-    margin-top: 8px;
-  }
-  .confirm {
-    width: 100%;
-    padding: 16px;
-    background: #27ae60;
-    color: #fff;
-    border: none;
-    border-radius: 12px;
-    font-size: 18px;
-    font-weight: 600;
-    margin-top: 16px;
-    cursor: pointer;
-  }
-  .confirm:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
+  .typebox input:focus { border-color: var(--amber); }
+  .typebox input::placeholder { color: #8b6a54; }
+  .typebox button { border: 1px solid var(--line); background: var(--panel); color: var(--cream); border-radius: 14px; padding: 0 16px; font: 600 15px ui-rounded, sans-serif; }
+
+  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; font: 13px ui-rounded, sans-serif; color: var(--amber-soft); background: transparent; border: 1px solid var(--line); border-radius: 99px; padding: 8px 13px; }
+
+  .actions { display: flex; gap: 10px; margin-top: auto; }
+  #confirm { flex: 1; border: 0; border-radius: 16px; padding: 17px; font: 700 18px ui-rounded, sans-serif; color: #1a0c06; background: var(--cream); }
+  #confirm:disabled { background: #4a2e20; color: #8b6a54; }
+  #clear { border: 1px solid var(--line); background: transparent; color: var(--dim); border-radius: 16px; padding: 0 18px; font: 600 15px ui-rounded, sans-serif; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(var(--sab) + 90px); transform: translate(-50%, 20px); background: var(--cream); color: #1a0c06; padding: 12px 18px; border-radius: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: .25s; max-width: 86vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .install { display: none; font-size: 13px; color: var(--dim); text-align: center; border: 1px dashed var(--line); border-radius: 14px; padding: 10px 12px; }
+  .install b { color: var(--amber-soft); }
 </style>
 </head>
 <body>
-<header>Jev Coffee · Live Order</header>
-<div class="main">
-  <div class="order-card">
-    <div class="field">
-      <label>Drink</label>
-      <div class="value" id="drink">—</div>
-    </div>
-    <div class="field">
-      <label>Size</label>
-      <div class="value" id="size">—</div>
-    </div>
-    <div class="field">
-      <label>Milk</label>
-      <div class="value" id="milk">—</div>
-    </div>
-    <div class="field">
-      <label>Extras</label>
-      <div class="value" id="extras">—</div>
-    </div>
+<div class="wrap">
+  <header>
+    <h1>Jev <span>Coffee</span></h1>
+    <div class="engine" id="engine"><i></i><span id="engineTxt">ready</span></div>
+  </header>
+
+  <section class="ticket" aria-live="polite">
+    <div class="row"><label>Drink</label><div class="v empty" id="drink">—</div></div>
+    <div class="row"><label>Size</label><div class="v empty" id="size">—</div></div>
+    <div class="row"><label>Milk</label><div class="v empty" id="milk">—</div></div>
+    <div class="row"><label>Extras</label><div class="v empty" id="extras">—</div></div>
     <div class="risks" id="risks"></div>
+  </section>
+
+  <div class="say idle" id="say">Tap the mic and say your order</div>
+
+  <div class="mic-wrap">
+    <button id="mic" aria-label="Start or stop listening">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm6-4a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.94V22h2v-3.06A8 8 0 0 0 20 11h-2z"/></svg>
+    </button>
+    <div class="mic-hint" id="micHint">Tap to talk</div>
   </div>
 
-  <div class="mic-area">
-    <button id="micBtn">🎤</button>
-    <div id="transcript">Tap the mic and order out loud…</div>
-    <div class="hint">Try: “Large oat latte, extra shot, and a croissant if you have it”</div>
+  <div class="typebox">
+    <input id="typed" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="…or type / use keyboard 🎤">
+    <button id="go">Go</button>
   </div>
 
-  <button class="confirm" id="confirmBtn" disabled>Confirm Order</button>
+  <div class="chips" id="chips">
+    <button class="chip">Large oat latte, extra shot, croissant</button>
+    <button class="chip">Flat white no milk</button>
+    <button class="chip">Medium cappuccino almond milk</button>
+    <button class="chip">Small soy mocha and a muffin</button>
+  </div>
+
+  <div class="install" id="install">Install: tap <b>Share</b> then <b>Add to Home Screen</b></div>
+
+  <div class="actions">
+    <button id="clear">Clear</button>
+    <button id="confirm" disabled>Confirm order</button>
+  </div>
 </div>
+<div class="toast" id="toast"></div>
 
 <script>
-const drinkEl = document.getElementById('drink');
-const sizeEl = document.getElementById('size');
-const milkEl = document.getElementById('milk');
-const extrasEl = document.getElementById('extras');
-const risksEl = document.getElementById('risks');
-const transcriptEl = document.getElementById('transcript');
-const micBtn = document.getElementById('micBtn');
-const confirmBtn = document.getElementById('confirmBtn');
+const $ = (id) => document.getElementById(id);
+const el = { drink: $('drink'), size: $('size'), milk: $('milk'), extras: $('extras') };
+const sayEl = $('say'), micBtn = $('mic'), micHint = $('micHint'), risksEl = $('risks');
+const confirmBtn = $('confirm'), engineEl = $('engine'), engineTxt = $('engineTxt'), typed = $('typed');
 
-let recognition;
-let isListening = false;
-let fullTranscript = '';
+const standalone = window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (isIOS && !standalone) $('install').style.display = 'block';
 
-const stock = {
-  oat: true,
-  almond: true,
-  soy: false,
-  croissant: false,
-  muffin: true,
-  extraShot: true
-};
+// ---- simulated stock (risk flags) ----
+const stock = { Oat: true, Almond: true, Soy: false, Skim: true, 'Full cream': true, croissant: false, muffin: true, extra_shot: true, syrup: true };
 
-function updateUI(order) {
-  const fields = [
-    { el: drinkEl, key: 'drink' },
-    { el: sizeEl, key: 'size' },
-    { el: milkEl, key: 'milk' },
-    { el: extrasEl, key: 'extras' }
-  ];
-  fields.forEach(f => {
-    const val = order[f.key] || '—';
-    if (f.el.textContent !== val) {
-      f.el.textContent = val;
-      f.el.classList.add('updating');
-      setTimeout(() => f.el.classList.remove('updating'), 400);
-    }
-  });
+// ---- state ----
+let order = null;              // { drink, size, milk, extras:[...], lowConf:{} }
+let seq = 0, ctl = null, debounce = null;
+let jevDown = false;           // true after the function reports no key / unreachable
 
-  risksEl.innerHTML = '';
-  (order.risks || []).forEach(r => {
-    const span = document.createElement('span');
-    span.className = 'risk' + (r.severity === 'out' ? ' out' : '');
-    span.textContent = r.message;
-    risksEl.appendChild(span);
-  });
+function say(text, cls) { sayEl.textContent = text; sayEl.className = 'say' + (cls ? ' ' + cls : ''); }
+function toast(t) { const n = $('toast'); n.textContent = t; n.classList.add('show'); setTimeout(() => n.classList.remove('show'), 2200); }
+function setEngine(kind, txt) { engineEl.className = 'engine ' + kind; engineTxt.textContent = txt; }
 
-  confirmBtn.disabled = !order.drink;
+// ---- on-device fallback parser (used only if Jev is unreachable) ----
+function localParse(text) {
+  const t = ' ' + text.toLowerCase() + ' ';
+  const has = (...a) => a.some((w) => t.includes(w));
+  const o = { engine: 'local', extras: {} };
+  const drinks = [['flat white','Flat White'],['long black','Long Black'],['latte','Latte'],['cappuccino','Cappuccino'],[' cap ','Cappuccino'],['espresso','Espresso'],['short black','Espresso'],['americano','Americano'],['mocha','Mocha']];
+  for (const [k, v] of drinks) if (t.includes(k)) { o.drink = { value: v }; break; }
+  if (has('large','big','grande')) o.size = { value: 'Large' }; else if (has('medium','regular')) o.size = { value: 'Medium' }; else if (has('small','short')) o.size = { value: 'Small' };
+  if (has('oat')) o.milk = { value: 'Oat' }; else if (has('almond')) o.milk = { value: 'Almond' }; else if (has('soy')) o.milk = { value: 'Soy' };
+  else if (has('skim','low fat')) o.milk = { value: 'Skim' }; else if (has('full cream','dairy')) o.milk = { value: 'Full cream' };
+  else if (has('no milk','black')) o.milk = { value: 'None' };
+  if (has('extra shot','double shot','extra espresso')) o.extras.extra_shot = {};
+  if (has('croissant')) o.extras.croissant = {};
+  if (has('muffin')) o.extras.muffin = {};
+  if (has('syrup','vanilla','caramel')) o.extras.syrup = {};
+  return o;
 }
 
-function parseSpeech(text) {
-  const t = text.toLowerCase();
-  const order = { risks: [] };
-
-  if (t.includes('latte')) order.drink = 'Latte';
-  else if (t.includes('cappuccino') || t.includes('cap')) order.drink = 'Cappuccino';
-  else if (t.includes('flat white')) order.drink = 'Flat White';
-  else if (t.includes('espresso')) order.drink = 'Espresso';
-  else if (t.includes('americano')) order.drink = 'Americano';
-  else if (t.includes('mocha')) order.drink = 'Mocha';
-  else if (t.includes('long black')) order.drink = 'Long Black';
-
-  if (t.includes('large') || t.includes('big') || t.includes('grande')) order.size = 'Large';
-  else if (t.includes('medium') || t.includes('regular')) order.size = 'Medium';
-  else if (t.includes('small') || t.includes('short')) order.size = 'Small';
-  else order.size = order.size || 'Medium';
-
-  if (t.includes('oat')) order.milk = 'Oat';
-  else if (t.includes('almond')) order.milk = 'Almond';
-  else if (t.includes('soy')) order.milk = 'Soy';
-  else if (t.includes('skim') || t.includes('low fat')) order.milk = 'Skim';
-  else if (t.includes('full cream') || t.includes('regular milk') || t.includes('dairy')) order.milk = 'Full cream';
-  else if (t.includes('no milk') || t.includes('black')) order.milk = 'None';
-
-  const extras = [];
-  if (t.includes('extra shot') || t.includes('double shot')) extras.push('Extra shot');
-  if (t.includes('croissant')) extras.push('Croissant');
-  if (t.includes('muffin')) extras.push('Muffin');
-  if (t.includes('syrup') || t.includes('vanilla')) extras.push('Vanilla syrup');
-  order.extras = extras.length ? extras.join(', ') : 'None';
-
-  if (order.milk === 'Oat' && !stock.oat) order.risks.push({ message: 'Oat milk low – almond suggested', severity: 'warn' });
-  if (order.milk === 'Soy' && !stock.soy) order.risks.push({ message: 'Soy milk out of stock', severity: 'out' });
-  if (extras.includes('Croissant') && !stock.croissant) order.risks.push({ message: 'Croissant unavailable – try muffin', severity: 'out' });
-  if (extras.includes('Extra shot') && !stock.extraShot) order.risks.push({ message: 'Extra shots temporarily limited', severity: 'warn' });
-
-  return order;
-}
-
-function processTranscript(text) {
-  transcriptEl.textContent = text || 'Listening…';
-  if (!text) return;
-  const order = parseSpeech(text);
-  updateUI(order);
-}
-
-function initRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    transcriptEl.textContent = 'Speech recognition not supported in this browser.';
-    return null;
-  }
-  const rec = new SpeechRecognition();
-  rec.continuous = true;
-  rec.interimResults = true;
-  rec.lang = 'en-AU';
-
-  rec.onresult = (e) => {
-    let interim = '';
-    let final = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const transcript = e.results[i][0].transcript;
-      if (e.results[i].isFinal) final += transcript;
-      else interim += transcript;
-    }
-    fullTranscript = (fullTranscript + ' ' + final).trim();
-    processTranscript((fullTranscript + ' ' + interim).trim());
-  };
-
-  rec.onend = () => {
-    if (isListening) {
-      try { rec.start(); } catch (err) {}
-    }
-  };
-
-  rec.onerror = (e) => {
-    console.error(e);
-    if (e.error === 'not-allowed') {
-      transcriptEl.textContent = 'Microphone permission needed.';
-    }
-  };
-
-  return rec;
-}
-
-micBtn.addEventListener('click', () => {
-  if (!recognition) recognition = initRecognition();
-  if (!recognition) return;
-
-  if (isListening) {
-    isListening = false;
-    recognition.stop();
-    micBtn.classList.remove('listening');
-    micBtn.textContent = '🎤';
-  } else {
-    isListening = true;
-    fullTranscript = '';
+async function interpret(text, mySeq) {
+  if (!jevDown) {
+    setEngine('jev busy', 'Jev…');
+    ctl && ctl.abort(); ctl = new AbortController();
+    const t0 = performance.now();
     try {
-      recognition.start();
-      micBtn.classList.add('listening');
-      micBtn.textContent = '⏹️';
-      transcriptEl.textContent = 'Listening…';
+      const r = await fetch('/api/order', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ transcript: text }), signal: ctl.signal });
+      if (!r.ok) throw new Error('status ' + r.status);
+      const d = await r.json();
+      if (mySeq !== seq) return;
+      setEngine('jev', 'Jev · ' + Math.round(performance.now() - t0) + ' ms');
+      return d;
     } catch (e) {
-      console.error(e);
+      if (e.name === 'AbortError') return;      // superseded by newer utterance
+      jevDown = true;                           // fall through to local parser for this session
     }
   }
+  if (mySeq !== seq) return;
+  setEngine('', 'on-device');
+  return localParse(text);
+}
+
+function render(d) {
+  const val = (f) => (f && f.value && !['None', 'Unspecified'].includes(f.value) ? f.value : null);
+  const drink = val(d.drink), size = val(d.size), milk = d.milk && d.milk.value !== 'Unspecified' ? d.milk.value : null;
+  const ex = d.extras || {};
+  const labels = { extra_shot: 'Extra shot', croissant: 'Croissant', muffin: 'Muffin', syrup: 'Vanilla syrup' };
+  const extras = Object.keys(labels).filter((k) => ex[k]);
+
+  const low = (f) => f && f.confidence != null && f.confidence < 0.7;
+  set('drink', drink, low(d.drink)); set('size', size || (drink ? 'Medium' : null), low(d.size)); set('milk', milk, low(d.milk));
+  set('extras', extras.length ? extras.map((k) => labels[k]).join(', ') : (drink ? 'None' : null), false);
+
+  const risks = [];
+  if (milk && stock[milk] === false) risks.push({ m: milk + ' milk out of stock', s: 'out' });
+  if (ex.croissant && !stock.croissant) risks.push({ m: 'Croissant unavailable — try a muffin', s: 'out' });
+  if (ex.muffin && !stock.muffin) risks.push({ m: 'Muffin unavailable', s: 'out' });
+  if (ex.extra_shot && !stock.extra_shot) risks.push({ m: 'Extra shots limited', s: 'warn' });
+  if (drink && !milk && !['Espresso','Long Black','Americano'].includes(drink)) risks.push({ m: 'Milk not heard — ask customer', s: 'warn' });
+  if (drink && !risks.length) risks.push({ m: 'No stock issues', s: 'ok' });
+  risksEl.innerHTML = '';
+  risks.forEach((r) => { const s = document.createElement('span'); s.className = 'risk ' + r.s; s.textContent = r.m; risksEl.appendChild(s); });
+
+  order = { drink, size, milk, extras };
+  confirmBtn.disabled = !drink || risks.some((r) => r.s === 'out');
+}
+
+function set(key, v, lowConf) {
+  const n = el[key], text = v || '—';
+  const base = n.firstChild && n.firstChild.nodeType === 3 ? n.firstChild.textContent : n.textContent.replace(/\s*check$/, '');
+  n.classList.toggle('empty', !v);
+  if (base !== text) { n.textContent = text; n.classList.add('flash'); setTimeout(() => n.classList.remove('flash'), 450); }
+  const old = n.querySelector('small'); if (old) old.remove();
+  if (v && lowConf) { const s = document.createElement('small'); s.textContent = 'not sure — check'; n.appendChild(s); }
+}
+
+async function handleText(text) {
+  const mySeq = ++seq;
+  const d = await interpret(text, mySeq);
+  if (d && mySeq === seq) render(d);
+}
+function handleTextDebounced(text) { clearTimeout(debounce); debounce = setTimeout(() => handleText(text), 250); }
+
+// ---- speech (Safari) ----
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false, finalText = '', gotAny = false, noSpeechTimer = null;
+
+function stopUI() { listening = false; micBtn.classList.remove('on'); micHint.textContent = 'Tap to talk'; clearTimeout(noSpeechTimer); }
+
+function startListening() {
+  if (!SR || (isIOS && standalone)) {
+    // iOS blocks the Speech API inside home-screen apps; keyboard dictation works everywhere.
+    typed.focus();
+    say('Voice capture isn’t available in the home-screen app. Tap the keyboard 🎤 and speak.', 'err');
+    return;
+  }
+  rec = new SR();
+  rec.lang = 'en-AU';
+  rec.interimResults = true;
+  rec.continuous = false;          // iOS Safari is unreliable with continuous=true; we restart manually
+  rec.maxAlternatives = 1;
+  finalText = ''; gotAny = false;
+
+  rec.onstart = () => { micBtn.classList.add('on'); micHint.textContent = 'Listening… tap to stop'; say('Listening…', 'idle'); };
+  rec.onresult = (e) => {
+    gotAny = true;
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const tr = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText = (finalText + ' ' + tr).trim(); else interim += ' ' + tr;
+    }
+    const full = (finalText + ' ' + interim).trim();
+    if (full) { say('“' + full + '”'); handleTextDebounced(full); }
+  };
+  rec.onerror = (e) => {
+    const m = {
+      'not-allowed': 'Microphone blocked. iPhone: Settings › Safari › Microphone → Allow, and turn on Settings › Siri › Dictation.',
+      'service-not-allowed': 'Dictation is off. Turn on Settings › General › Keyboard › Enable Dictation, and Siri in Settings.',
+      'audio-capture': 'No microphone found.',
+      'network': 'Speech service unreachable — check your connection.',
+      'no-speech': null, 'aborted': null,
+    }[e.error];
+    if (m) { say(m, 'err'); listening = false; }
+  };
+  rec.onend = () => {
+    if (listening) {                 // user hasn't tapped stop: keep going (short utterances end the session on iOS)
+      try { rec.start(); return; } catch (_) {}
+    }
+    stopUI();
+    if (!gotAny && !sayEl.classList.contains('err')) say('Didn’t catch that — tap and try again, or type below.', 'err');
+  };
+
+  listening = true;
+  try { rec.start(); }
+  catch (err) { stopUI(); say('Couldn’t start the mic: ' + err.message, 'err'); return; }
+  // iOS sometimes "starts" with no prompt and no events; tell the user instead of sitting silent
+  noSpeechTimer = setTimeout(() => { if (listening && !gotAny) say('Listening… nothing heard yet. Speak closer, or type below.', 'idle'); }, 6000);
+}
+function stopListening() { listening = false; try { rec && rec.stop(); } catch (_) {} stopUI(); }
+
+micBtn.addEventListener('click', () => (listening ? stopListening() : startListening()));
+
+// ---- typed / keyboard-dictation path (works in the home-screen app) ----
+function submitTyped() { const t = typed.value.trim(); if (!t) return; say('“' + t + '”'); handleText(t); typed.blur(); }
+$('go').addEventListener('click', submitTyped);
+typed.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitTyped(); });
+typed.addEventListener('input', () => { const t = typed.value.trim(); if (t) handleTextDebounced(t); });
+$('chips').addEventListener('click', (e) => { const c = e.target.closest('.chip'); if (!c) return; typed.value = c.textContent; say('“' + c.textContent + '”'); handleText(c.textContent); });
+
+$('clear').addEventListener('click', () => { stopListening(); seq++; typed.value = ''; ['drink','size','milk','extras'].forEach((k) => set(k, null)); risksEl.innerHTML = ''; confirmBtn.disabled = true; order = null; say('Tap the mic and say your order', 'idle'); });
+confirmBtn.addEventListener('click', () => {
+  if (!order) return;
+  if (navigator.vibrate) navigator.vibrate(40);
+  toast('Order sent: ' + [order.size, order.drink].filter(Boolean).join(' ') + (order.milk && order.milk !== 'None' ? ' · ' + order.milk : ''));
+  $('clear').click();
 });
 
-confirmBtn.addEventListener('click', () => {
-  alert('Order confirmed!\n\n' + 
-    drinkEl.textContent + ' · ' + sizeEl.textContent + '\n' +
-    'Milk: ' + milkEl.textContent + '\n' +
-    'Extras: ' + extrasEl.textContent);
-  fullTranscript = '';
-  processTranscript('');
-  transcriptEl.textContent = 'Order placed. Tap mic for another.';
-});
+if (!SR || (isIOS && standalone)) micHint.textContent = standalone && isIOS ? 'Use the keyboard 🎤 below' : 'Voice not supported — type below';
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 </script>
 </body>
 </html>
