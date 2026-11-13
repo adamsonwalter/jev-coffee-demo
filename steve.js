@@ -1,9 +1,9 @@
-// Steve the dachshund. Say "dachshund" or "sausage dog" in any demo and he trots through, barks twice, and leaves.
+// Steve the dachshund (silent on purpose: playing audio on iPhone takes over the mic channel and kills speech recognition). Say "dachshund" or "sausage dog" in any demo and he trots through, barks twice, and leaves.
 // Any page that loads this file and calls Steve.check(text) gets him. Total screen time ~2.9s.
 (function () {
   const TRIGGER = /\b(dachshunds?|sausage[ -]?dogs?|wiener[ -]?dogs?|weiner[ -]?dogs?|doxie)\b/i;
   const COOLDOWN = 7000;
-  let last = 0, ctx = null;
+  let last = 0;
 
   const SVG = `
 <svg viewBox="0 0 230 120" width="230" height="120" aria-hidden="true">
@@ -64,39 +64,13 @@
     return n;
   }
 
-  // WebAudio bark: noisy burst through a band-pass plus a falling sawtooth. No audio file needed.
-  function bark(when) {
-    if (!ctx || ctx.state !== 'running') return;
-    const t = ctx.currentTime + when, dur = 0.2;
-    const o = ctx.createOscillator(); o.type = 'sawtooth';
-    o.frequency.setValueAtTime(420, t); o.frequency.exponentialRampToValueAtTime(170, t + dur);
-    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 1.1;
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    const nb = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate), d = nb.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
-    const ns = ctx.createBufferSource(); ns.buffer = nb;
-    const ng = ctx.createGain(); ng.gain.value = 0.35;
-    o.connect(f); ns.connect(ng); ng.connect(f); f.connect(g); g.connect(ctx.destination);
-    o.start(t); o.stop(t + dur); ns.start(t);
-  }
-
-  // iOS only lets audio start after a tap; unlock on the first touch anywhere.
-  function unlock() {
-    try {
-      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === 'suspended') ctx.resume();
-    } catch (_) {}
-  }
-  ['touchstart', 'click', 'keydown'].forEach((e) => addEventListener(e, unlock, { passive: true }));
-
   function run() {
     const n = ensure();
     n.className = ''; void n.offsetWidth; n.classList.add('go');
     const open = (ms) => setTimeout(() => { n.classList.add('open', 'bark'); setTimeout(() => n.classList.remove('open', 'bark'), 190); }, ms);
     setTimeout(() => n.classList.add('still'), 810);
-    open(860); setTimeout(() => bark(0), 860);
-    open(1400); setTimeout(() => bark(0), 1400);
+    open(860);
+    open(1400);
     setTimeout(() => n.classList.remove('still'), 2150);
     setTimeout(() => { n.className = ''; }, 3000);
     if (navigator.vibrate) navigator.vibrate([30, 80, 30]);

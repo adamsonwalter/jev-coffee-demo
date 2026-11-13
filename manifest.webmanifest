@@ -4,8 +4,7 @@
   "description": "Speak your coffee order. Jev fills it in live.",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
-  "orientation": "portrait",
+  "display": "browser",
   "background_color": "#1a0c06",
   "theme_color": "#1a0c06",
   "icons": [

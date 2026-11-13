@@ -5,10 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jev Coffee</title>
 
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Jev Coffee">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1a0c06">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Speak it. Jev fills it in live.">
@@ -79,22 +76,16 @@
   .say.err { color: var(--out); font-style: normal; font-size: 15px; font-family: ui-rounded, sans-serif; }
 
   .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  #mic { position: relative; width: 88px; height: 88px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: radial-gradient(circle at 35% 28%, #ffd88a, var(--amber) 55%, #d98615); box-shadow: 0 10px 30px rgba(255,176,64,.3), inset 0 -4px 10px rgba(120,60,0,.35); display: grid; place-items: center; touch-action: manipulation; transition: transform .12s; }
+  #mic { position: relative; width: 112px; height: 112px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: radial-gradient(circle at 35% 28%, #ffd88a, var(--amber) 55%, #d98615); box-shadow: 0 10px 30px rgba(255,176,64,.3), inset 0 -4px 10px rgba(120,60,0,.35); display: grid; place-items: center; touch-action: manipulation; transition: transform .12s; }
   #mic:active { transform: scale(.94); }
-  #mic svg { width: 36px; height: 36px; fill: #2a140a; }
+  #mic svg { width: 46px; height: 46px; fill: #2a140a; }
   #mic.on { background: radial-gradient(circle at 35% 28%, #ffb09f, #f0604a 60%, #c23a28); animation: ring 1.4s infinite; }
   @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(240,96,74,.55); } 70%, 100% { box-shadow: 0 0 0 26px rgba(240,96,74,0); } }
   .mic-hint { font-size: 13px; color: var(--dim); }
 
-  .typebox { display: flex; gap: 8px; }
-  .typebox input { flex: 1; min-width: 0; font: 16px ui-rounded, sans-serif; color: var(--cream); background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; -webkit-user-select: text; user-select: text; outline: none; }
-  .typebox input:focus { border-color: var(--amber); }
-  .typebox input::placeholder { color: #8b6a54; }
-  .typebox button { border: 1px solid var(--line); background: var(--panel); color: var(--cream); border-radius: 14px; padding: 0 16px; font: 600 15px ui-rounded, sans-serif; }
-
-  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
-  .chips::-webkit-scrollbar { display: none; }
-  .chip { flex: none; max-width: 78vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 13px ui-rounded, sans-serif; color: var(--amber-soft); background: transparent; border: 1px solid var(--line); border-radius: 99px; padding: 8px 13px; }
+  .try { text-align: center; font-size: 14px; line-height: 1.4; color: var(--dim); padding: 0 8px; }
+  .try b { display: block; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--amber-soft); margin-bottom: 4px; font-weight: 600; }
+  .try i { font: italic 16px/1.4 ui-serif, Georgia, serif; color: var(--ink); }
 
   .actions { display: flex; gap: 10px; margin-top: auto; }
   #confirm { flex: 1; border: 0; border-radius: 16px; padding: 17px; font: 700 18px ui-rounded, sans-serif; color: #1a0c06; background: var(--cream); }
@@ -131,12 +122,7 @@
     <div class="mic-hint" id="micHint">Tap to talk</div>
   </div>
 
-  <div class="typebox">
-    <input id="typed" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-    <button id="go">Go</button>
-  </div>
-
-  <div class="chips" id="chips"></div>
+  <div class="try" id="try"></div>
 
   <div class="actions">
     <button id="clear">Clear</button>
@@ -150,7 +136,7 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const sayEl = $('say'), micBtn = $('mic'), micHint = $('micHint'), risksEl = $('risks'), rowsEl = $('rows');
-const confirmBtn = $('confirm'), engineEl = $('engine'), engineTxt = $('engineTxt'), typed = $('typed');
+const confirmBtn = $('confirm'), engineEl = $('engine'), engineTxt = $('engineTxt');
 
 const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -177,10 +163,7 @@ function select(id) {
   document.title = demo.id === 'coffee' ? 'Jev Coffee' : 'Jev · ' + demo.tab;
   rowsEl.innerHTML = '';
   demo.labels.forEach((l) => { const r = document.createElement('div'); r.className = 'row'; r.innerHTML = '<label></label><div class="v empty">—</div>'; r.firstChild.textContent = l; rowsEl.appendChild(r); });
-  typed.value = ''; typed.placeholder = demo.placeholder;
-  $('chips').innerHTML = '';
-  demo.chips.forEach((c) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = c; $('chips').appendChild(b); });
-  $('chips').scrollLeft = 0;
+  $('try').innerHTML = '<b>Try saying</b><i></i>'; $('try').lastChild.textContent = '“' + demo.chips[0] + '”';
   resetOutput(); setEngine('', 'ready');
   if (window.Steve) Steve.reset();
 }
@@ -268,10 +251,10 @@ function heard(text) { if (window.Steve) Steve.check(text); }
 // ---------- speech (Safari / Chrome) ----------
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null, listening = false, finalText = '', gotAny = false, noSpeechTimer = null;
-function stopUI() { listening = false; micBtn.classList.remove('on'); micHint.textContent = noVoice() ? (isIOS && standalone ? 'Use the keyboard mic below' : 'Voice not supported: type below') : 'Tap to talk'; clearTimeout(noSpeechTimer); }
+function stopUI() { listening = false; micBtn.classList.remove('on'); micHint.textContent = noVoice() ? (isIOS && standalone ? 'Voice needs Safari' : 'Voice not supported here') : 'Tap to talk'; clearTimeout(noSpeechTimer); }
 
 function startListening() {
-  if (noVoice()) { typed.focus(); say('Voice capture isn’t available in the home-screen app. Tap the mic on your keyboard and speak.', 'err'); return; }
+  if (noVoice()) { say(isIOS && standalone ? 'iPhone doesn’t allow voice inside home-screen apps. Open this page in Safari to talk.' : 'This browser has no speech recognition. Use Safari or Chrome.', 'err'); return; }
   rec = new SR(); rec.lang = 'en-AU'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
   finalText = ''; gotAny = false;
   rec.onstart = () => { micBtn.classList.add('on'); micHint.textContent = 'Listening… tap to stop'; say('Listening…', 'idle'); };
@@ -288,23 +271,16 @@ function startListening() {
   rec.onend = () => {
     if (listening) { try { rec.start(); return; } catch (_) {} }
     stopUI();
-    if (!gotAny && !sayEl.classList.contains('err')) say('Didn’t catch that. Tap and try again, or type below.', 'err');
+    if (!gotAny && !sayEl.classList.contains('err')) say('Didn’t catch that. Tap and try again.', 'err');
   };
   listening = true;
   try { rec.start(); } catch (err) { stopUI(); say('Couldn’t start the mic: ' + err.message, 'err'); return; }
-  noSpeechTimer = setTimeout(() => { if (listening && !gotAny) say('Listening… nothing heard yet. Speak closer, or type below.', 'idle'); }, 6000);
+  noSpeechTimer = setTimeout(() => { if (listening && !gotAny) say('Listening… nothing heard yet. Speak closer to the phone.', 'idle'); }, 6000);
 }
 function stopListening() { listening = false; try { rec && rec.stop(); } catch (_) {} stopUI(); }
 micBtn.addEventListener('click', () => (listening ? stopListening() : startListening()));
 
-// ---------- typed / keyboard-dictation ----------
-function submitTyped() { const t = typed.value.trim(); if (!t) return; say('“' + t + '”'); heard(t); handleText(t); typed.blur(); }
-$('go').addEventListener('click', submitTyped);
-typed.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitTyped(); });
-typed.addEventListener('input', () => { const t = typed.value.trim(); if (t) { heard(t); handleTextDebounced(t); } });
-$('chips').addEventListener('click', (e) => { const c = e.target.closest('.chip'); if (!c) return; typed.value = c.textContent; say('“' + c.textContent + '”'); handleText(c.textContent); });
-
-$('clear').addEventListener('click', () => { stopListening(); seq++; clearTimeout(debounce); ctl && ctl.abort(); typed.value = ''; resetOutput(); setEngine('', 'ready'); if (window.Steve) Steve.reset(); });
+$('clear').addEventListener('click', () => { stopListening(); seq++; clearTimeout(debounce); ctl && ctl.abort(); resetOutput(); setEngine('', 'ready'); if (window.Steve) Steve.reset(); });
 confirmBtn.addEventListener('click', () => {
   if (!lastRender) return;
   if (navigator.vibrate) navigator.vibrate(40);
