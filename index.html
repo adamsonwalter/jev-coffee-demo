@@ -30,7 +30,7 @@
     padding: calc(var(--sat) + 12px) 18px calc(var(--sab) + 16px);
     display: flex; flex-direction: column; min-height: 100%;
   }
-  .wrap { width: 100%; max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; gap: 14px; }
+  .wrap { width: 100%; max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; gap: 11px; }
 
   .tabs { display: flex; gap: 4px; padding: 4px; background: var(--bg2); border: 1px solid var(--line); border-radius: 16px; }
   .tab { flex: 1; border: 0; background: transparent; color: var(--dim); font: 600 14px ui-rounded, sans-serif; padding: 10px 4px; border-radius: 12px; white-space: nowrap; transition: background .2s, color .2s; }
@@ -48,9 +48,9 @@
   @keyframes pulse { to { opacity: .25; } }
 
   .ticket { background: linear-gradient(180deg, var(--panel), var(--bg2)); border: 1px solid var(--line); border-radius: 22px; padding: 4px 18px 14px; }
-  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 0; border-bottom: 1px dashed var(--line); gap: 12px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px dashed var(--line); gap: 12px; }
   .row label { font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
-  .row .v { font: 600 21px/1.15 ui-serif, "New York", Georgia, serif; color: var(--cream); text-align: right; transition: color .25s; }
+  .row .v { font: 600 20px/1.15 ui-serif, "New York", Georgia, serif; color: var(--cream); text-align: right; transition: color .25s; }
   .row .v.empty { color: #7b5a45; font-weight: 400; }
   .row .v.flash { color: var(--amber); }
   .row .v small { display: block; font: 12px ui-rounded, sans-serif; color: var(--warn); margin-top: 2px; }
@@ -71,14 +71,14 @@
   .score .t { font: 600 22px ui-serif, Georgia, serif; color: var(--cream); }
   .score .s { font-size: 13px; color: var(--dim); }
 
-  .say { text-align: center; min-height: 56px; display: flex; align-items: center; justify-content: center; padding: 0 6px; font: italic 18px/1.35 ui-serif, Georgia, serif; color: var(--amber-soft); }
+  .say { text-align: center; min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 0 6px; font: italic 18px/1.35 ui-serif, Georgia, serif; color: var(--amber-soft); }
   .say.idle { color: var(--dim); font-size: 16px; }
   .say.err { color: var(--out); font-style: normal; font-size: 15px; font-family: ui-rounded, sans-serif; }
 
   .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  #mic { position: relative; width: 112px; height: 112px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: radial-gradient(circle at 35% 28%, #ffd88a, var(--amber) 55%, #d98615); box-shadow: 0 10px 30px rgba(255,176,64,.3), inset 0 -4px 10px rgba(120,60,0,.35); display: grid; place-items: center; touch-action: manipulation; transition: transform .12s; }
+  #mic { position: relative; width: 76px; height: 76px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: radial-gradient(circle at 35% 28%, #ffd88a, var(--amber) 55%, #d98615); box-shadow: 0 10px 30px rgba(255,176,64,.3), inset 0 -4px 10px rgba(120,60,0,.35); display: grid; place-items: center; touch-action: manipulation; transition: transform .12s; }
   #mic:active { transform: scale(.94); }
-  #mic svg { width: 46px; height: 46px; fill: #2a140a; }
+  #mic svg { width: 32px; height: 32px; fill: #2a140a; }
   #mic.on { background: radial-gradient(circle at 35% 28%, #ffb09f, #f0604a 60%, #c23a28); animation: ring 1.4s infinite; }
   @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(240,96,74,.55); } 70%, 100% { box-shadow: 0 0 0 26px rgba(240,96,74,0); } }
   .mic-hint { font-size: 13px; color: var(--dim); }
@@ -188,7 +188,7 @@ function resetOutput() {
 function localCoffee(text) {
   const t = ' ' + text.toLowerCase() + ' ', has = (...a) => a.some((w) => t.includes(w)), f = {};
   const Y = { value: 'yes' };
-  for (const [k, n] of [['flat white', 'Flat White'], ['long black', 'Long Black'], ['latte', 'Latte'], ['cappuccino', 'Cappuccino'], [' cap ', 'Cappuccino'], ['espresso', 'Espresso'], ['short black', 'Espresso'], ['americano', 'Americano'], ['mocha', 'Mocha']]) if (t.includes(k)) { f.drink = { value: n }; break; }
+  for (const [k, n] of [['long macchiato', 'Long Macchiato'], ['macchiato', 'Macchiato'], ['cortado', 'Cortado'], ['cold brew', 'Cold Brew'], ['flat white', 'Flat White'], ['long black', 'Long Black'], ['latte', 'Latte'], ['cappuccino', 'Cappuccino'], [' cap ', 'Cappuccino'], ['espresso', 'Espresso'], ['short black', 'Espresso'], ['americano', 'Americano'], ['mocha', 'Mocha']]) if (t.includes(k)) { f.drink = { value: n }; break; }
   f.size = { value: has('large', 'big', 'grande') ? 'Large' : has('medium', 'regular') ? 'Medium' : has('small', 'short') ? 'Small' : 'Unspecified' };
   f.milk = { value: has('oat') ? 'Oat' : has('almond') ? 'Almond' : has('soy') ? 'Soy' : has('skim', 'low fat') ? 'Skim' : has('full cream', 'dairy') ? 'Full cream' : has('no milk', 'black') ? 'None' : 'Unspecified' };
   if (has('extra shot', 'double shot')) f.extra_shot = Y; if (has('croissant')) f.croissant = Y; if (has('muffin')) f.muffin = Y; if (has('syrup', 'vanilla', 'caramel')) f.syrup = Y;

@@ -25,7 +25,7 @@
       'Blend my brownie into a frappe',
       'A long macchiato with a sausage dog please',
     ],
-    labels: ['Drink', 'Size', 'Milk', 'Extras'],
+    labels: ['Drink', 'Size', 'Milk', 'Temp', 'Extras', 'Food'],
     confirm: 'Confirm order',
     maxFlags: 3,
     render(f) {
@@ -34,14 +34,16 @@
       const size = sizeV || (drink ? 'Medium' : null);
       const milk = f.milk && f.milk.value !== 'Unspecified' ? v(f, 'milk') : null;
       const iced = yes(f, 'iced') && (f.iced.confidence == null || f.iced.confidence >= 0.6);
-      const mods = [];
-      const labels = { extra_shot: 'Extra shot', croissant: 'Croissant', muffin: 'Muffin', syrup: 'Vanilla syrup' };
-      Object.keys(labels).forEach((k) => yes(f, k) && mods.push(labels[k]));
+      const mods = [], food = [];
+      if (yes(f, 'extra_shot')) mods.push('Extra shot');
+      if (yes(f, 'syrup')) mods.push('Vanilla syrup');
       if (v(f, 'caf') === 'Half') mods.push('Half-caf'); if (v(f, 'caf') === 'Decaf') mods.push('Decaf');
-      if (yes(f, 'extra_hot')) mods.push('Extra hot');
-      if (iced) mods.push(yes(f, 'no_ice_milk_top') ? 'No ice' : 'Iced');
       if (yes(f, 'no_foam')) mods.push('No foam');
       if (yes(f, 'sugar_in_shot')) mods.push('Sugar in shot');
+      if (yes(f, 'croissant')) food.push('Croissant');
+      if (yes(f, 'muffin')) food.push('Muffin');
+      const hot = yes(f, 'extra_hot');
+      const temp = drink ? (iced ? (yes(f, 'no_ice_milk_top') ? 'Iced, no ice' : 'Iced') + (hot ? ', extra hot' : '') : (hot ? 'Extra hot' : 'Hot')) : null;
 
       const flags = [];
       const add = (m, s) => flags.push({ m, s });
@@ -63,7 +65,7 @@
       if (drink && !flags.length) add('No stock issues', 'ok');
       flags.sort((x, y) => ({ out: 0, warn: 1, ok: 2 })[x.s] - ({ out: 0, warn: 1, ok: 2 })[y.s]);
       return {
-        rows: [[drink, low(f, 'drink')], [size, low(f, 'size') && !!sizeV], [milk === 'Split' ? 'Split milks' : milk, low(f, 'milk')], [mods.length ? mods.join(', ') : (drink ? 'None' : null)]],
+        rows: [[drink, low(f, 'drink')], [size, low(f, 'size') && !!sizeV], [milk === 'Split' ? 'Split milks' : milk, low(f, 'milk')], [temp], [mods.length ? mods.join(', ') : (drink ? 'None' : null)], [food.length ? food.join(', ') : (drink ? 'None' : null)]],
         flags, ok: !!drink && !flags.some((x) => x.s === 'out'),
         toast: [size, drink].filter(Boolean).join(' ') + (milk && milk !== 'None' ? ' · ' + milk : ''),
       };
