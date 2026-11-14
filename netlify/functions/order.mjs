@@ -136,7 +136,30 @@ const json = (body, status = 200) =>
     headers: { "content-type": "application/json", "cache-control": "no-store" },
   });
 
+
+// TEMPORARY diagnostic: GET /api/order?diag=1 reports what the gateway says at each step (URL redacted).
+async function diagnose() {
+  const out = { hasGateway: !!GATEWAY, host: GATEWAY ? new URL(GATEWAY).host : null, pathLen: GATEWAY ? new URL(GATEWAY).pathname.length : 0, steps: [] };
+  const snip = (t) => String(t || "").slice(0, 500).split(GATEWAY || "\u0000").join("[url]");
+  const args = { state: { t: "hello" }, questions: { x: { type: "choice", criteria: { yes: "a", no: "b" } } } };
+  const step = async (name, body, sid, method = "POST") => {
+    try {
+      const r = await fetch(GATEWAY, { method, headers: sid ? { ...H, "mcp-session-id": sid } : H, body: method === "POST" ? JSON.stringify(body) : undefined, redirect: "manual", signal: AbortSignal.timeout(8000) });
+      const t = await r.text();
+      out.steps.push({ name, status: r.status, ct: r.headers.get("content-type"), sid: !!r.headers.get("mcp-session-id"), loc: r.headers.get("location") ? "redirect" : undefined, body: snip(t) });
+      return { r, t };
+    } catch (e) { out.steps.push({ name, error: String(e && e.message || e) }); return {}; }
+  };
+  await step("direct tools/call", { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "systemone", arguments: args } });
+  const init = await step("initialize", { jsonrpc: "2.0", id: 0, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "jev-coffee", version: "1" } } });
+  const sid = init.r && init.r.headers.get("mcp-session-id");
+  if (init.r) await step("tools/list", { jsonrpc: "2.0", id: 3, method: "tools/list" }, sid);
+  if (init.r) await step("tools/call after init", { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "systemone", arguments: args } }, sid);
+  return out;
+}
+
 export default async (req) => {
+  if (req.method === "GET" && new URL(req.url).searchParams.get("diag") === "1") return json(await diagnose());
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   if (!GATEWAY) return json({ error: "no_gateway" }, 503);
 
