@@ -12,7 +12,7 @@ const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls)
 const sayEl = $('say'), micBtn = $('mic'), micHint = $('micHint'), risksEl = $('risks'), rowsEl = $('rows'), confirmBtn = $('confirm');
 
 // Per-conversation state. Reset by resetOutput() (tab change, Clear) and by each new mic session.
-let mode = 'voice', log = [], drawn = '', demo = DEMOS[0], seq = 0, ctl = null, lastFields = null, lastText = '', lastRender = null, lastChecked = '', pins = {};
+let mode = 'voice', log = [], drawn = '', hint = '', demo = DEMOS[0], seq = 0, ctl = null, lastFields = null, lastText = '', lastRender = null, lastChecked = '', pins = {};
 let jevDownAt = 0, sweepTimer = null, throttleTimer = null, pendingText = '', lastFire = 0, tryTimer = null, tryIdx = 0;
 
 const jevDown = () => Date.now() - jevDownAt < T.retryMs;
@@ -176,20 +176,21 @@ confirmBtn.addEventListener('click', () => {
 // ---------- backend mode: the operations console behind the voice ----------
 function setMode(m) {
   mode = m; document.body.classList.toggle('be', m === 'backend'); $('backend').hidden = m !== 'backend';
-  if (m === 'backend') { listener.stop(); drawn = ''; refreshBackend(true); } else ops.load(demo.id);
+  if (m === 'backend') { listener.stop(); drawn = ''; refreshBackend(true); } else { hint = ''; ops.load(demo.id); }
   syncUrl();
 }
 async function refreshBackend(force) {
   const root = $('backend');
   await ops.load(demo.id); log = await ops.loadLog();
-  const sig = JSON.stringify([ops.data(demo.id), log, demo.id, ops.storeKind]);
+  const sig = JSON.stringify([ops.data(demo.id), log, demo.id, ops.storeKind, hint]);
   if (!force && sig === drawn) return;
   drawn = sig; const y = root.scrollTop;
   drawBackend(root, demo, ops.data(demo.id), log, {
     send: async (effects, note) => { await ops.send(demo.id, effects, note); drawn = ''; refreshBackend(true); },
-    reset: async () => { await ops.reset(demo.id); drawn = ''; refreshBackend(true); },
+    scenario: async (sid) => { hint = await ops.scenario(demo.id, sid); drawn = ''; refreshBackend(true); },
+    reset: async () => { await ops.reset(demo.id); hint = ''; drawn = ''; refreshBackend(true); },
     clearLog: async () => { log = await ops.clearLog(); drawn = ''; refreshBackend(true); },
-  }, ops.storeKind);
+  }, ops.storeKind, hint);
   root.scrollTop = y;
 }
 $('modeBtn').addEventListener('click', () => setMode('backend'));

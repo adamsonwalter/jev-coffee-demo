@@ -53,6 +53,14 @@ const sales = {
   rowKeys: [null, 'interest', 'budget', 'timeline', 'decision_maker', 'next_step'],   // the question(s) behind each row (null: none). Lets the final check rewrite a row
   confirm: 'Save to CRM',
   data: DEFAULT_DATA,
+  scenarios: [
+    { id: 'quarterend', name: 'End of quarter', blurb: 'Diary completely full', say: 'Spoke to Priya at Northwind, she wants a demo, book it for Thursday',
+      effects: (d) => Object.keys(d.calendar).map((id) => ({ op: 'set', path: `calendar.${id}.status`, value: 'booked' })) },
+    { id: 'open', name: 'Open diary', blurb: 'Every slot free, a new lead to log', say: 'Met Elena at Redgum Coffee, keen, book a follow-up call',
+      effects: (d) => Object.keys(d.calendar).map((id) => ({ op: 'set', path: `calendar.${id}.status`, value: 'free' })) },
+    { id: 'hot', name: 'Hot pipeline', blurb: 'Three deals closing', say: 'Met Marcus at Harbour Freight, signed budget, wants to start this month, book a demo',
+      effects: () => [{ op: 'set', path: 'deals.harbour-freight.stage', value: 'Closing' }, { op: 'set', path: 'deals.harbour-freight.score', value: 88 }, { op: 'set', path: 'deals.tidewater-legal.score', value: 91 }, { op: 'set', path: 'deals.northwind.stage', value: 'Closing' }, { op: 'set', path: 'deals.northwind.score', value: 76 }] },
+  ],
   backend: {
     name: 'CRM', sub: 'Pipeline and calendar · what the voice looks up and updates',
     sections: [

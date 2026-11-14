@@ -11,9 +11,9 @@ const walk = (obj, keys) => keys.reduce((o, k) => (o !== null && typeof o === 'o
 const clean = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-MAX_NUM, Math.min(MAX_NUM, v)) : typeof v === 'boolean' ? v : typeof v === 'string' ? v.slice(0, MAX_STR) : v === null ? null : undefined);
 
 // Returns { data, applied, rejected } and never mutates the input.
-export function applyEffects(data, effects, note) {
+export function applyEffects(data, effects, note, max = 30) {
   const next = JSON.parse(JSON.stringify(data || {})), applied = [], rejected = [];
-  for (const e of (Array.isArray(effects) ? effects : []).slice(0, 30)) {
+  for (const e of (Array.isArray(effects) ? effects : []).slice(0, max)) {
     const keys = parts(e && e.path);
     if (!keys) { rejected.push(e); continue; }
     const parent = walk(next, keys.slice(0, -1)), last = keys[keys.length - 1];

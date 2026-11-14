@@ -30,6 +30,7 @@ function makeSlots() {   // five days, three clinicians; today afternoon is deli
   return slots;
 }
 const DEFAULT_DATA = { slots: makeSlots(), activity: [] };
+const slotEffects = (d, rule) => Object.entries(d.slots).flatMap(([id, s]) => { const [status, patient] = rule(s); return [{ op: 'set', path: `slots.${id}.status`, value: status }, { op: 'set', path: `slots.${id}.patient`, value: patient }]; });
 
 function findSlot(slots, f) {
   const gpOnly = ['Injury', 'Followup', 'Checkup'].includes(v(f, 'reason'));
@@ -53,6 +54,14 @@ const desk = {
   rowKeys: [null, 'reason', 'urgency', 'patient', null],   // the question(s) behind each row (null: none). Lets the final check rewrite a row
   confirm: 'Book appointment',
   data: DEFAULT_DATA,
+  scenarios: [
+    { id: 'full', name: 'Fully booked week', blurb: 'One slot left, on Thursday morning', say: "Hi it's Dave, I've been before, my knee is sore, can I come in tomorrow afternoon",
+      effects: (d) => slotEffects(d, (s) => (s.day === 3 && s.who === 'Dr Patel' && s.time === '09:20' ? ['free', ''] : ['booked', s.patient || 'Booked'])) },
+    { id: 'open', name: 'Quiet day', blurb: 'Every slot free', say: "Hi it's Dave, I've been before, my knee is sore, can I come in tomorrow afternoon",
+      effects: (d) => slotEffects(d, () => ['free', '']) },
+    { id: 'away', name: 'Dr Chen on leave', blurb: 'Dr Chen booked out for three days', say: 'I would like a check-up tomorrow morning, I have been before',
+      effects: (d) => slotEffects(d, (s) => (s.who === 'Dr Chen' && s.day <= 2 ? ['booked', 'On leave'] : [s.status, s.patient])) },
+  ],
   backend: {
     name: 'Practice calendar', sub: 'Appointments · what reception and the voice both check',
     sections: [{ type: 'slots', title: 'Appointments', path: 'slots', groupBy: ['day', 'who'], chip: (s) => s.time, groupLabel: (field, val) => (field === 'day' ? dayLabel(val) : val) }, { type: 'activity' }],

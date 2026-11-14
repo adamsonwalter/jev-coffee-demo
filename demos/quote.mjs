@@ -1,6 +1,6 @@
 // Demo: quote. One self-contained file: the questions Jev is asked, what the screen shows, and the arithmetic.
 // (Copy demos/_template.mjs to make a new one, then add one line to demos/index.mjs.)
-import { v, yes, low, pr, yn, ch } from './lib.mjs';
+import { v, yes, low, pr, yn, ch, setAll } from './lib.mjs';
 
 // What Jev is asked. Each key becomes a typed question; answers arrive as fields[key] = { value, confidence, p }.
 const questions = {
@@ -83,6 +83,14 @@ const quote = {
   confirm: 'Send range to customer',
   maxFlags: 4,
   data: DATA,
+  scenarios: [
+    { id: 'storm', name: 'Storm week', blurb: 'Nobody free today, hot water units gone', say: 'Hot water has gone and the tank is leaking, I need a plumber today',
+      effects: (d) => [...Object.keys(d.crew).flatMap((t) => [{ op: 'set', path: `crew.${t}.today`, value: 0 }, { op: 'set', path: `crew.${t}.tomorrow`, value: t === 'Plumbing' ? 1 : 0 }]), ...setAll('parts', { 'Hot water unit 250L': 0, 'Gas regulator': 1 })] },
+    { id: 'quiet', name: 'Quiet season', blurb: 'Crews free, vans stocked', say: 'Hot water has gone and the tank is leaking, I need a plumber today',
+      effects: (d) => [...Object.keys(d.crew).flatMap((t) => [{ op: 'set', path: `crew.${t}.today`, value: 2 }, { op: 'set', path: `crew.${t}.tomorrow`, value: 3 }]), ...setAll('parts', { 'Hot water unit 250L': 8, 'Ceiling fan kit': 8, 'Gas regulator': 8, 'Toilet suite': 8 })] },
+    { id: 'sparky', name: 'Sparky shortage', blurb: 'No electricians, no fan kits', say: 'I need a sparky to install a ceiling fan, it is urgent',
+      effects: () => [...setAll('crew.Electrical', { today: 0, tomorrow: 0 }), ...setAll('parts', { 'Ceiling fan kit': 0 })] },
+  ],
   backend: {
     name: 'Dispatch board', sub: 'Crews and parts · what the office and the voice both check',
     sections: [

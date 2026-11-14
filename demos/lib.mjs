@@ -22,3 +22,6 @@ export const v = (f, k) => (f[k] && f[k].value) || null;                        
 export const yes = (f, k) => !!f[k] && f[k].value === 'yes';                                    // yes/no question answered yes
 export const low = (f, k) => !!f[k] && f[k].confidence != null && f[k].confidence < TUNING.unsure;  // Jev was unsure
 export const pr = (f, k, opt) => (f[k] && f[k].p && f[k].p[opt]) || 0;                          // probability of one option
+
+// For scenarios: set many numbers or values at once. setAll('stock', { Oat: 2, Soy: 0 }) -> effects.
+export const setAll = (prefix, map) => Object.entries(map).map(([k, value]) => ({ op: 'set', path: `${prefix}.${k}`, value }));

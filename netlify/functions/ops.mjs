@@ -2,9 +2,10 @@
 //   GET  /api/data?demo=coffee                    -> { data, store }   store: 'blobs' (real) or 'memory' (fallback)
 //   POST /api/data { demo, effects, note }        -> { data }      apply effects (see demos/effects.mjs)
 //   POST /api/data { demo, reset: true }          -> { data }      back to the starting data
+//   POST /api/data { demo, scenario: 'rush' }     -> { data, say } a pitch situation (see demo.scenarios)
 //   GET  /api/log                                 -> { log }       what the final check caught
 //   POST /api/log { clear: true }                 -> { log: [] }
-import { getData, sendEffects, resetData, readLog, clearLog, hasData } from '../../server/ops.mjs';
+import { getData, sendEffects, resetData, applyScenario, readLog, clearLog, hasData } from '../../server/ops.mjs';
 import { store } from '../../server/store.mjs';
 import { json, guard } from '../../server/http.mjs';
 
@@ -24,6 +25,7 @@ export default async (req, context) => {
     const st = await store('demo-data');   // st.kind says whether this is real Blobs storage or the in-memory fallback
     if (req.method === 'GET') return json({ data: await getData(demo, st), store: st.kind });
     if (req.method !== 'POST') return json({ error: 'method' }, 405);
+    if (body.scenario) { const r = await applyScenario(demo, String(body.scenario), st); return r ? json({ ...r, store: st.kind }) : json({ error: 'unknown_scenario' }, 400); }
     if (body.reset) return json({ data: await resetData(demo, st), store: st.kind });
     const r = await sendEffects(demo, body.effects, body.note, st);
     return json({ data: r.data, applied: r.applied, rejected: r.rejected, store: st.kind });

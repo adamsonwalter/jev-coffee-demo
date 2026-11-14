@@ -22,6 +22,12 @@ export async function send(id, effects, note) {
   try { cache[id] = (await call('/api/data', { demo: id, effects, note })).data; } catch { cache[id] = applyEffects(data(id), effects, note).data; }
   return cache[id];
 }
+// Apply a scenario (a pitch situation). Returns the phrase to say next. Offline: runs locally, same result.
+export async function scenario(id, sid) {
+  const sc = DEMOS.find((d) => d.id === id).scenarios.find((x) => x.id === sid);
+  try { const j = await call('/api/data', { demo: id, scenario: sid }); cache[id] = j.data; } catch { const base = start(id); cache[id] = applyEffects(base, sc.effects(base), 'Scenario: ' + sc.name, 400).data; }
+  return sc.say;
+}
 export async function reset(id) {
   try { cache[id] = (await call('/api/data', { demo: id, reset: true })).data; } catch { cache[id] = start(id); }
   return cache[id];

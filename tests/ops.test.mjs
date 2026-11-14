@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { applyEffects } from '../demos/effects.mjs';
 import { DEMOS } from '../demos/index.mjs';
 import { memoryStore } from '../server/store.mjs';
-import { getData, sendEffects, resetData, logEvent, readLog, clearLog } from '../server/ops.mjs';
+import { getData, sendEffects, resetData, applyScenario, logEvent, readLog, clearLog } from '../server/ops.mjs';
 import { allow, originOk, LIMITS } from '../server/guard.mjs';
 
 test('effects: add never goes below zero; set only changes what exists; put adds records', () => {
@@ -101,3 +101,33 @@ test('HTTP door /api/data and /api/log: read, write, reset, refuse', async () =>
   r = await call('/api/log'); assert.ok(Array.isArray((await r.json()).log));
   r = await call('/api/data?demo=coffee', null, { headers: { origin: 'https://evil.example' } }); assert.equal(r.status, 403);
 });
+
+// What Jev would return for each scenario's phrase (hand-written), and what the voice must then say. Guards "the ping".
+const F = (value, confidence = 1) => ({ value, confidence, p: null });
+const SCEN = {
+  'coffee/rush': [{ drink: F('Flat White'), size: F('Large'), milk: F('Oat'), muffin: F('yes') }, [/Oat milk low \(2 left\)/, /Only 1 muffin left/]],
+  'coffee/delivery': [{ drink: F('Latte'), size: F('Large'), milk: F('Soy'), croissant: F('yes') }, [/No stock issues/]],
+  'coffee/lastone': [{ drink: F('Flat White'), milk: F('Full cream'), croissant: F('yes'), muffin: F('yes') }, [/Only 1 croissant left/, /Muffin sold out/]],
+  'desk/full': [{ reason: F('Injury'), urgency: F('Soon'), day: F('Tomorrow'), time: F('Afternoon'), patient: F('Existing'), red_flag: F('no') }, [/No tomorrow afternoon slots\. Next free: .*Dr Patel/]],
+  'desk/open': [{ reason: F('Injury'), urgency: F('Soon'), day: F('Tomorrow'), time: F('Afternoon'), patient: F('Existing'), red_flag: F('no') }, [/Free: Tomorrow 14:00/]],
+  'desk/away': [{ reason: F('Checkup'), urgency: F('Routine'), day: F('Tomorrow'), time: F('Morning'), patient: F('Existing'), red_flag: F('no') }, [/Free: Tomorrow .* Dr Patel/]],
+  'quote/storm': [{ trade: F('Plumbing'), issue: F('HotWater'), scope: F('Small'), urgency: F('Emergency'), access: F('Easy') }, [/No plumber free today\. Tomorrow: 1 crew/, /Hot water unit 250L out of stock/]],
+  'quote/quiet': [{ trade: F('Plumbing'), issue: F('HotWater'), scope: F('Small'), urgency: F('Emergency'), access: F('Easy') }, [/Plumber free today \(2 crew\)/]],
+  'quote/sparky': [{ trade: F('Electrical'), issue: F('Install'), scope: F('Small'), urgency: F('Emergency'), access: F('Easy') }, [/No sparky free today\. Nothing tomorrow either/, /Ceiling fan kit out of stock/]],
+  'sales/quarterend': [{ interest: F('Hot'), next_step: F('Demo'), company: F('Northwind') }, [/No free calendar slots/, /CRM: Northwind/]],
+  'sales/open': [{ interest: F('Warm'), next_step: F('Call'), company: F('Redgum Coffee') }, [/New lead: Redgum Coffee/, /Calendar: .* is free/]],
+  'sales/hot': [{ interest: F('Hot'), next_step: F('Demo'), company: F('Harbour Freight') }, [/CRM: Harbour Freight · Closing/, /Calendar: .* is free/]],
+};
+for (const d of DEMOS) for (const sc of d.scenarios || []) {
+  test(`scenario ${d.id}/${sc.id}: applies cleanly, changes the data, and the voice then pings what it should`, async () => {
+    assert.ok(sc.name && sc.blurb && sc.say);
+    const st = memoryStore(), r = await applyScenario(d.id, sc.id, st);
+    assert.equal(r.rejected, 0, 'every effect accepted'); assert.ok(r.applied > 0);
+    assert.notDeepEqual({ ...r.data, activity: 0 }, { ...d.data, activity: 0 }, 'must differ from the starting data');
+    assert.match(r.data.activity[0].note, /^Scenario: /);
+    const [fields, expects] = SCEN[`${d.id}/${sc.id}`] || assert.fail('add expected pings for this scenario to SCEN');
+    const out = d.render(fields, r.data), text = [...out.flags.map((x) => x.m), ...out.rows.map((x) => x[0] || '')].join(' | ');
+    for (const re of expects) assert.match(text, re);
+  });
+}
+test('unknown scenario is refused', async () => assert.equal(await applyScenario('coffee', 'nope', memoryStore()), null));

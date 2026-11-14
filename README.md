@@ -19,6 +19,9 @@ Tabs: Coffee (home), Quote (trades), Front desk (clinic booking), Sales (post-ca
 2. In `demos/index.mjs`, import it and add it to the list.
 3. `npm test`, then push to `main`. The tab, the Jev questions, the screen and its Backend all come from that one file.
 
+## Scenarios
+Each demo's Backend has a **Scenarios** card: one tap sets up a pitch situation ("Friday rush", "Fully booked week", "Storm week", "End of quarter") from clean data, then says what to say in Voice. Defined in the demo as `scenarios: [{ id, name, blurb, say, effects(data) }]`. `tests/ops.test.mjs` checks each one applies cleanly and that the voice then pings what it should; add the expected pings to `SCEN` there when you add a scenario.
+
 ## How a conversation flows
 words -> live read about every 0.6 s (Jev for choices, extraction for names) -> render reads the backend data and pings stockouts or no availability -> after a pause or mic-off: **settle** unsure fields -> **final check** (Jev audits each row; clear mismatches are rewritten, tagged, chimed, and logged) -> **confirm** applies the demo's effects to the backend.
 

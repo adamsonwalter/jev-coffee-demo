@@ -17,6 +17,15 @@ export async function sendEffects(id, effects, note, st) {
   if (r.applied.length) await st.set(id, r.data);
   return { data: r.data, applied: r.applied.length, rejected: r.rejected.length };
 }
+// A scenario starts from the clean data, then applies the demo's changes (a pitch situation in one tap).
+export async function applyScenario(id, scenarioId, st) {
+  const sc = ((byId[id] && byId[id].scenarios) || []).find((x) => x.id === scenarioId);
+  if (!sc) return null;
+  st = st || (await store('demo-data'));
+  const base = fresh(id), r = applyEffects(base, sc.effects(base), 'Scenario: ' + sc.name, 400);
+  await st.set(id, r.data);
+  return { data: r.data, applied: r.applied.length, rejected: r.rejected.length, say: sc.say };
+}
 export async function resetData(id, st) {
   st = st || (await store('demo-data'));
   await st.del(id);

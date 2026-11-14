@@ -3,14 +3,15 @@
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const clock = (t) => new Date(t).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
 
-// h = { send(effects, note), reset(), clearLog() }
-export function drawBackend(root, demo, data, log, h, storeKind = '') {
+// h = { send(effects, note), scenario(id), reset(), clearLog() }; hint = what to say after a scenario was applied
+export function drawBackend(root, demo, data, log, h, storeKind = '', hint = '') {
   root.textContent = '';
   const be = demo.backend;
   const top = el('div', 'be-top'), back = el('button', 'be-back', '‹ Voice'); back.dataset.act = 'voice';
   const title = el('div', 'be-title'); title.append(el('b', '', be.name), el('span', '', be.sub));
   const live = el('div', 'be-live' + (storeKind === 'memory' ? ' warn' : '')); live.append(el('i'), document.createTextNode(storeKind === 'memory' ? 'Not saved' : 'Live'));
   top.append(back, title, live); root.appendChild(top);
+  if (demo.scenarios && demo.scenarios.length) root.appendChild(scenarios(demo.scenarios, h, hint));
   for (const sec of be.sections) { const f = SECTIONS[sec.type]; if (f) root.appendChild(f(sec, data, h)); }
   root.appendChild(qualityLog(log, h));
   const foot = el('div', 'be-foot'), reset = el('button', 'be-reset', 'Reset demo data'); reset.onclick = () => h.reset();
@@ -89,6 +90,15 @@ const SECTIONS = {
     return card('Activity', list);
   },
 };
+
+// One tap sets up a pitch situation. Afterwards it says what to say in Voice to see the backend "ping".
+function scenarios(list, h, hint) {
+  const box = el('div', 'be-scen');
+  list.forEach((sc) => { const b = el('button', 'scen'); b.append(el('b', '', sc.name), el('span', '', sc.blurb)); b.onclick = () => h.scenario(sc.id); box.appendChild(b); });
+  const c = card('Scenarios · set up a situation in one tap', box);
+  if (hint) { const t = el('div', 'be-hint'); t.append(el('b', '', 'Ready. '), document.createTextNode('Tap ‹ Voice and say: '), el('em', '', '“' + hint + '”')); c.appendChild(t); }
+  return c;
+}
 
 function qualityLog(log, h) {
   const body = el('div', 'be-act');

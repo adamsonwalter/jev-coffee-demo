@@ -1,6 +1,6 @@
 // Demo: coffee. One self-contained file: the questions Jev is asked, what the screen shows, and the arithmetic.
 // (Copy demos/_template.mjs to make a new one, then add one line to demos/index.mjs.)
-import { v, yes, low, pr, yn, ch, TUNING } from './lib.mjs';
+import { v, yes, low, pr, yn, ch, TUNING, setAll } from './lib.mjs';
 
 // What Jev is asked. Each key becomes a typed question; answers arrive as fields[key] = { value, confidence, p }.
 const questions = {
@@ -94,6 +94,15 @@ const coffee = {
   confirm: 'Confirm order',
   maxFlags: 3,
   data: DEFAULT_DATA,
+  // One-tap pitch situations for the Backend screen: each starts from the clean data, then changes it. `say` is what to say next.
+  scenarios: [
+    { id: 'rush', name: 'Friday rush', blurb: 'Soy gone, oat nearly gone, one muffin left', say: 'A large oat flat white and a muffin',
+      effects: () => setAll('stock', { Oat: 2, Almond: 1, Soy: 0, Muffin: 1, Croissant: 0, Cookie: 0, 'Espresso shots': 14 }) },
+    { id: 'delivery', name: 'Fresh delivery', blurb: 'Everything stocked', say: 'A large soy latte and a croissant',
+      effects: () => setAll('stock', { Oat: 40, Almond: 30, Soy: 24, Skim: 20, 'Full cream': 40, Croissant: 18, Muffin: 18, Cookie: 24, 'Espresso shots': 300, 'Vanilla syrup': 20 }) },
+    { id: 'lastone', name: 'Last croissant', blurb: 'One croissant, nothing else baked', say: 'A flat white with a croissant and a muffin',
+      effects: () => setAll('stock', { Croissant: 1, Muffin: 0, Cookie: 0 }) },
+  ],
   backend: {
     name: 'Stockroom', sub: 'Café inventory · what the till and the voice both check',
     sections: [
