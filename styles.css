@@ -171,3 +171,52 @@ body.be .wrap, body.be .toast { display: none; }
 #player[hidden] { display: none; }
 #playerVideo { max-width: 100%; max-height: 100%; border-radius: 14px; background: #000; }
 #playerClose { position: absolute; top: calc(var(--sat) + 10px); right: 14px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(250, 238, 214, .16); color: var(--cream); font: 400 28px/1 ui-rounded, sans-serif; z-index: 1; }
+
+/* Header icon (opens "What it's for") and the version label */
+.hright { display: flex; align-items: center; gap: 8px; }
+.iconbtn { width: 34px; height: 34px; flex: none; border-radius: 50%; border: 1px solid var(--line); color: var(--amber-soft); display: grid; place-items: center; text-decoration: none; }
+.iconbtn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.iconbtn:active { background: var(--bg2); }
+.linkrow { position: relative; display: flex; justify-content: center; align-items: center; }
+.ver { position: absolute; right: 2px; font-size: 11px; letter-spacing: .8px; color: var(--dim); opacity: .6; }
+
+/* What it's for: one scrolling page over the demo. Dividers, not cards. */
+#stories { position: fixed; inset: 0; z-index: 90; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; user-select: text; -webkit-user-select: text;
+  background: radial-gradient(120% 60% at 50% 0%, #4a2412 0%, var(--bg) 60%); padding: calc(var(--sat) + 12px) 18px calc(var(--sab) + 28px); }
+#stories[hidden] { display: none; }
+.st-page { max-width: 460px; margin: 0 auto; }
+.st-head { display: flex; align-items: center; justify-content: space-between; }
+.st-head h2 { margin: 0; font: 600 26px/1 ui-serif, "New York", Georgia, serif; color: var(--cream); }
+.st-close { width: 38px; height: 38px; border: 0; border-radius: 50%; background: rgba(250, 238, 214, .14); color: var(--cream); font: 400 26px/1 ui-rounded, sans-serif; }
+.st-lede { margin: 14px 0 12px; font: 17px/1.5 ui-serif, Georgia, serif; color: var(--ink); }
+.st-legend { list-style: none; margin: 0 0 16px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+.st-legend li { font-size: 13px; line-height: 1.3; color: var(--ink); padding-left: 16px; position: relative; }
+.st-legend li::before { content: ''; position: absolute; left: 0; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--amber)); }
+.st-k-checked { --c: var(--ok); } .st-k-warned { --c: var(--out); } .st-k-asked { --c: var(--warn); } .st-k-next { --c: var(--amber-soft); }
+.st-who { display: flex; gap: 6px; overflow-x: auto; margin: 0 -18px; padding: 2px 18px 10px; scrollbar-width: none; }
+.st-who::-webkit-scrollbar { display: none; }
+.st-who button { flex: none; border: 1px solid var(--line); background: transparent; color: var(--ink); font: 600 14px ui-rounded, sans-serif; padding: 9px 14px; border-radius: 99px; white-space: nowrap; }
+.st-who button.on { background: var(--cream); color: #1a0c06; border-color: var(--cream); }
+.st-persona h3 { margin: 10px 0 4px; font: 600 24px/1.2 ui-serif, "New York", Georgia, serif; color: var(--amber-soft); }
+.st-checks { margin: 0 0 6px; font-size: 14px; line-height: 1.4; color: var(--dim); }
+.st-story { padding: 18px 0; border-top: 1px dashed var(--line); }
+.st-top { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.st-top h4 { margin: 0; font: 600 20px/1.25 ui-serif, "New York", Georgia, serif; color: var(--cream); }
+.st-badge { font-size: 11px; letter-spacing: .8px; text-transform: uppercase; font-weight: 700; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--line); color: var(--dim); }
+.st-badge.today { color: var(--ok); border-color: rgba(143, 214, 148, .45); }
+.st-badge.yours { border-style: dashed; color: var(--amber-soft); border-color: rgba(255, 216, 138, .45); }
+.st-scene { margin: 10px 0 12px; font-size: 15px; line-height: 1.5; color: var(--ink); }
+.st-step { margin: 0 0 12px; }
+.st-say { font: italic 18px/1.4 ui-serif, Georgia, serif; color: var(--amber-soft); border-left: 3px solid var(--amber); padding-left: 12px; }
+.st-label { font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--amber-soft); font-weight: 600; }
+.st-step .risks { padding-top: 10px; }
+.risk.ask { background: transparent; border-style: dashed; color: var(--amber-soft); border-color: rgba(255, 216, 138, .5); }
+.st-next { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 176, 64, .1); border: 1px solid rgba(255, 176, 64, .3); }
+.st-next b { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--amber); margin-bottom: 3px; }
+.st-next span { font: italic 16px/1.4 ui-serif, Georgia, serif; color: var(--cream); }
+.st-payoff { margin: 4px 0 0; font-size: 15px; line-height: 1.5; color: var(--cream); font-weight: 600; }
+.st-try, .st-open { margin-top: 12px; border: 1px solid var(--line); background: transparent; color: var(--amber-soft); border-radius: 99px; padding: 9px 16px; font: 600 13px ui-rounded, sans-serif; }
+.st-open { display: block; margin: 8px auto 0; padding: 14px 24px; background: var(--amber); color: #1a0c06; border: 0; font-size: 16px; border-radius: 16px; }
+.st-foot { margin-top: 28px; padding-top: 14px; border-top: 1px dashed var(--line); text-align: center; }
+.st-ver { font-size: 12px; letter-spacing: 1px; color: var(--amber-soft); opacity: .8; }
+.st-copy { margin-top: 8px; font-size: 11px; line-height: 1.5; color: var(--dim); }

@@ -6,6 +6,8 @@ import { fx } from './fx/index.js';
 import { createListener, voiceProblem, idleHint, iosApp } from './speech.js';
 import * as ops from './ops.js';
 import { drawBackend } from './backend.js';
+import { drawStories } from './stories.js';
+import { VERSION } from './version.mjs';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
@@ -13,6 +15,7 @@ const sayEl = $('say'), micBtn = $('mic'), micHint = $('micHint'), risksEl = $('
 
 // Per-conversation state. Reset by resetOutput() (tab change, Clear) and by each new mic session.
 let mode = 'voice', log = [], drawn = '', hint = '', demo = DEMOS[0], seq = 0, ctl = null, lastFields = null, lastText = '', lastRender = null, lastChecked = '', pins = {};
+let storiesOpen = false, lastHash = '', pendingSay = null;
 let jevDownAt = 0, sweepTimer = null, throttleTimer = null, pendingText = '', lastFire = 0, reading = 0, tryTimer = null, tryIdx = 0;
 
 const jevDown = () => Date.now() - jevDownAt < T.retryMs;
@@ -38,7 +41,9 @@ function select(id) {
   startTry(); fx.tab(demo.id);
   resetOutput(); setEngine('', 'ready'); fx.reset();
 }
-function syncUrl() {   // #quote = that tab; #quote/backend = that tab's backend (open it on a laptop beside the phone)
+function syncUrl() {   // while the stories page is open the URL belongs to it
+  if (storiesOpen) return;
+  // #quote = that tab; #quote/backend = that tab's backend (open it on a laptop beside the phone)
   const h = mode === 'backend' ? '#' + demo.id + '/backend' : demo.id === DEMOS[0].id ? '' : '#' + demo.id;
   try { history.replaceState(null, '', location.pathname + h); } catch (_) {}
 }
@@ -225,12 +230,36 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('player').hidd
 
 // ---------- boot ----------
 buildTabs();
-function route() {   // #quote or #quote/backend
-  const [id, sub] = (location.hash || '').slice(1).split('/'), want = DEMOS.find((d) => d.id === id) || DEMOS[0];
+// ---------- stories: "What it's for", opened from the icon in the header; #stories/dentist links straight to one person's stories ----------
+function showStories(personaId) {
+  listener.stop(); storiesOpen = true;
+  if (!document.querySelector('.tab.on')) select(DEMOS[0].id);   // a direct link still needs the demo behind it
+  const root = $('stories'), wasHidden = root.hidden;
+  drawStories(root, personaId, {
+    pick: (pid) => { location.hash = '#stories/' + pid; },
+    close: () => { location.hash = lastHash; },
+    tryIt: async (tab, t) => {   // set up the scenario (if any), go to that tab, and show the phrase to say
+      if (t && t.scenario) await ops.scenario(tab, t.scenario);
+      if (t) pendingSay = 'Say: “' + t.say + '”';
+      location.hash = tab === DEMOS[0].id ? '' : '#' + tab;
+    },
+  });
+  root.hidden = false; if (wasHidden) root.scrollTop = 0;
+}
+function hideStories() { storiesOpen = false; $('stories').hidden = true; }
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && storiesOpen) location.hash = lastHash; });
+
+function route() {   // #quote, #quote/backend, #stories or #stories/dentist
+  const [id, sub] = (location.hash || '').slice(1).split('/');
+  if (id === 'stories') { showStories(sub); return; }
+  hideStories(); lastHash = location.hash;
+  const want = DEMOS.find((d) => d.id === id) || DEMOS[0];
   if (want.id !== demo.id || !document.querySelector('.tab.on')) select(want.id);
   setMode(sub === 'backend' ? 'backend' : 'voice');
+  if (pendingSay) { say(pendingSay, 'idle'); pendingSay = null; }
 }
 route();
 window.addEventListener('hashchange', route);
+$('ver').textContent = 'v' + VERSION;
 micHint.textContent = idleHint();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
