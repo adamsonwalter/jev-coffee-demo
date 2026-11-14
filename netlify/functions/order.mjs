@@ -116,12 +116,12 @@ const DESK = {
 
 const SALES = {
   interest: ch({ Hot: "Buyer is keen and engaged, asking about next steps or price", Warm: "Interested but not committed", Cold: "Little interest or polite brush-off" }),
-  budget: ch({ Confirmed: "Budget confirmed or approved", Vague: "Budget discussed only vaguely", TooHigh: "Buyer says it is too expensive", NotDiscussed: "Budget not discussed" }),
+  budget: ch({ Confirmed: "Budget confirmed or approved", Quoted: "A price was quoted and the buyer has not yet agreed to it", Vague: "Budget discussed only vaguely", TooHigh: "Buyer says it is too expensive", NotDiscussed: "Budget not discussed" }),
   timeline: ch({ Now: "Wants to move this month", Quarter: "Within about three months", Later: "Later, no date, or just exploring" }),
   decision_maker: ch({ Yes: "Spoke with the decision maker", No: "Needs sign-off from someone else", Unknown: "Not clear who decides" }),
   competitor: yn("A competitor or alternative is mentioned", "No competitor mentioned"),
   stall: yn("Buyer hesitates, delays, goes quiet, or says they will think about it", "No stalling signals"),
-  next_step: ch({ Proposal: "Send a proposal or quote", Demo: "Book a demo or meeting", Call: "Follow-up call", None: "No next step agreed" }),
+  next_step: ch({ Proposal: "Send a proposal or quote", Payment: "Send an invoice or payment link", Demo: "Book a demo or meeting", Call: "Follow-up call", None: "No next step agreed" }),
 };
 
 const SETS = {
@@ -142,19 +142,29 @@ export default async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   if (!GATEWAY) return json({ error: "no_gateway" }, 503);
 
-  let transcript = "", demo = "coffee";
+  let transcript = "", demo = "coffee", only = null, final = false;
   try {
-    ({ transcript, demo = "coffee" } = await req.json());
+    ({ transcript, demo = "coffee", only = null, final = false } = await req.json());
   } catch {}
   transcript = String(transcript || "").trim().slice(0, 900);
   const set = SETS[demo];
   if (!set) return json({ error: "unknown_demo" }, 400);
   if (!transcript) return json({ error: "empty" }, 400);
 
+  // Settling pass: the speaker has paused or stopped. Re-ask only the uncertain fields, on the whole conversation.
+  let questions = set.q, context = set.ctx;
+  if (final) {
+    context += " This is the complete final transcript of everything said. Consider the whole conversation: later statements override earlier ones, and answer what the speaker meant.";
+    if (Array.isArray(only) && only.length) {
+      const picked = Object.fromEntries(Object.entries(set.q).filter(([k]) => only.includes(k)));
+      if (Object.keys(picked).length) questions = picked;
+    }
+  }
+
   const t0 = Date.now();
   let data;
   try {
-    data = await callSystemOne({ model: MODEL, state: { transcript, context: set.ctx }, questions: set.q });
+    data = await callSystemOne({ model: MODEL, state: { transcript, context }, questions });
   } catch (e) {
     return json({ error: String(e.message || e) }, 502);
   }

@@ -53,6 +53,7 @@
   .row .v { font: 600 20px/1.15 ui-serif, "New York", Georgia, serif; color: var(--cream); text-align: right; transition: color .25s; }
   .row .v.empty { color: #7b5a45; font-weight: 400; }
   .row .v.flash { color: var(--amber); }
+  .row .v.settle { color: var(--ok); transition: color .9s; }
   .row .v small { display: block; font: 12px ui-rounded, sans-serif; color: var(--warn); margin-top: 2px; }
   .banner { margin: 12px 0 2px; padding: 12px 14px; border-radius: 14px; background: rgba(255,138,120,.16); border: 1px solid var(--out); color: #ffd3cb; }
   .banner b { display: block; font-size: 16px; color: var(--out); margin-bottom: 2px; }
@@ -143,7 +144,7 @@ const standalone = navigator.standalone === true || matchMedia('(display-mode: s
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const noVoice = () => !SR || (isIOS && standalone);
 
-let demo = DEMOS[0], seq = 0, ctl = null, debounce = null, jevDownAt = 0, lastRender = null;
+let lastFields = null, lastText = '', sweepTimer = null, demo = DEMOS[0], seq = 0, ctl = null, debounce = null, jevDownAt = 0, lastRender = null;
 
 function say(text, cls) { sayEl.textContent = text; sayEl.className = 'say' + (cls ? ' ' + cls : ''); }
 function toast(t) { const n = $('toast'); n.textContent = t; n.classList.add('show'); setTimeout(() => n.classList.remove('show'), 2400); }
@@ -178,6 +179,7 @@ function startTry() {
   if (demo.chips.length > 1) tryTimer = setInterval(show, 5000);
 }
 function resetOutput() {
+  lastFields = null; lastText = ''; clearTimeout(sweepTimer);
   rowsEl.querySelectorAll('.v').forEach((n) => { n.className = 'v empty'; n.textContent = '—'; });
   risksEl.innerHTML = ''; $('banner').innerHTML = ''; $('extra').innerHTML = '';
   confirmBtn.disabled = true; confirmBtn.className = ''; confirmBtn.textContent = demo.confirm; lastRender = null;
@@ -195,13 +197,13 @@ function localCoffee(text) {
   return f;
 }
 
-async function interpret(text, mySeq) {
+async function interpret(text, mySeq, extra) {
   if (Date.now() - jevDownAt > 15000) {
     setEngine('jev busy', 'Jev…');
     ctl && ctl.abort(); ctl = new AbortController();
     const t0 = performance.now();
     try {
-      const r = await fetch('/api/order', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ demo: demo.id, transcript: text }), signal: ctl.signal });
+      const r = await fetch('/api/order', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ demo: demo.id, transcript: text }, extra || {})), signal: ctl.signal });
       if (!r.ok) throw new Error('status ' + r.status);
       const d = await r.json();
       if (mySeq !== seq) return;
@@ -219,7 +221,7 @@ async function interpret(text, mySeq) {
 }
 
 // ---------- render ----------
-function render(f) {
+function render(f, settle) {
   const out = demo.render(f);
   if (!out.rows.some((r) => r && r[0]) && !(out.flags || []).length) out.flags = [{ m: 'Heard you, but no order details yet. Keep talking.', s: 'warn' }];
   lastRender = out;
@@ -228,7 +230,7 @@ function render(f) {
     const n = row.querySelector('.v'), [val, lowConf] = out.rows[i] || [];
     const text = val || '—', base = n.firstChild && n.firstChild.nodeType === 3 ? n.firstChild.textContent : n.textContent;
     n.classList.toggle('empty', !val);
-    if (base !== text) { n.textContent = text; n.classList.add('flash'); setTimeout(() => n.classList.remove('flash'), 450); changed = true; }
+    if (base !== text) { n.textContent = text; n.classList.add(settle ? 'settle' : 'flash'); setTimeout(() => n.classList.remove('flash', 'settle'), settle ? 1100 : 450); changed = true; }
     const old = n.querySelector('small'); if (old) old.remove();
     if (val && lowConf) { const s = document.createElement('small'); s.textContent = 'not sure — check'; n.appendChild(s); }
   });
@@ -260,7 +262,29 @@ function render(f) {
 async function handleText(text) {
   const mySeq = ++seq;
   const f = await interpret(text, mySeq);
-  if (f && mySeq === seq) render(f);
+  if (f && mySeq === seq) { lastFields = f; lastText = text; render(f); armSweep(); }
+}
+
+// ---------- settling pass: after a pause or when the mic stops, re-check only the uncertain fields ----------
+function armSweep() { clearTimeout(sweepTimer); if (listening) sweepTimer = setTimeout(sweep, 2200); }
+async function sweep() {
+  clearTimeout(sweepTimer);
+  if (!lastFields || !lastText) return;
+  const keys = Object.keys(lastFields).filter((k) => lastFields[k].confidence != null && lastFields[k].confidence < 0.8);
+  if (!keys.length || Date.now() - jevDownAt < 15000) return;
+  const mySeq = seq, t0 = performance.now();
+  setEngine('jev busy', 'Jev checking ' + keys.length + '…');
+  ctl && ctl.abort(); ctl = new AbortController();
+  try {
+    const r = await fetch('/api/order', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ demo: demo.id, transcript: lastText, final: true, only: keys }), signal: ctl.signal });
+    if (!r.ok) throw new Error('status ' + r.status);
+    const d = await r.json();
+    if (mySeq !== seq) return;            // newer speech arrived: ignore
+    const merged = Object.assign({}, lastFields);
+    keys.forEach((k) => { if (d.fields && d.fields[k]) merged[k] = d.fields[k]; });
+    lastFields = merged; render(merged, true);
+    setEngine('jev', 'Jev · settled ' + Math.round(performance.now() - t0) + ' ms');
+  } catch (e) { if (e.name !== 'AbortError') setEngine('jev', 'Jev · live'); }
 }
 function handleTextDebounced(text) { clearTimeout(debounce); debounce = setTimeout(() => handleText(text), 250); }
 function heard(text) { if (window.Steve) Steve.check(text); }
@@ -306,7 +330,7 @@ function startListening() {
   // silent for 6s in continuous mode (some iPhones): switch to phrase-by-phrase
   noSpeechTimer = setTimeout(() => { if (listening && !gotAny) { if (continuous) { continuous = false; try { rec.abort(); } catch (_) {} } say('Listening… nothing heard yet. Speak closer to the phone.', 'idle'); } }, 6000);
 }
-function stopListening() { listening = false; try { rec && rec.stop(); } catch (_) {} stopUI(); }
+function stopListening() { const was = listening; listening = false; try { rec && rec.stop(); } catch (_) {} stopUI(); if (was) setTimeout(sweep, 350); }
 micBtn.addEventListener('click', () => (listening ? stopListening() : startListening()));
 
 $('clear').addEventListener('click', () => { stopListening(); seq++; clearTimeout(debounce); ctl && ctl.abort(); resetOutput(); setEngine('', 'ready'); if (window.Steve) Steve.reset(); });

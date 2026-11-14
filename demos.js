@@ -156,10 +156,10 @@
     render(f) {
       if (!f.interest) return { rows: [[null], [null], [null], [null], [null]], flags: [], ok: false };
       const interest = 40 * pr(f, 'interest', 'Hot') + 22 * pr(f, 'interest', 'Warm') + 5 * pr(f, 'interest', 'Cold');
-      const bud = { Confirmed: 20, Vague: 10, NotDiscussed: 6, TooHigh: 2 }[v(f, 'budget')] || 0;
+      const bud = { Confirmed: 20, Quoted: 12, Vague: 10, NotDiscussed: 6, TooHigh: 2 }[v(f, 'budget')] || 0;
       const tl = { Now: 15, Quarter: 10, Later: 3 }[v(f, 'timeline')] || 0;
       const dm = { Yes: 15, No: 6, Unknown: 3 }[v(f, 'decision_maker')] || 0;
-      const nx = { Proposal: 10, Demo: 10, Call: 6, None: 0 }[v(f, 'next_step')] || 0;
+      const nx = { Proposal: 10, Payment: 12, Demo: 10, Call: 6, None: 0 }[v(f, 'next_step')] || 0;
       let score = interest + bud + tl + dm + nx - (yes(f, 'stall') ? 10 : 0) - (yes(f, 'competitor') ? 5 : 0);
       score = Math.max(0, Math.min(100, Math.round(score)));
       const band = score >= 70 ? 'Hot' : score >= 40 ? 'Warm' : 'Cold';
@@ -170,8 +170,8 @@
       if (v(f, 'decision_maker') === 'No') flags.push({ m: 'Decision maker not on the call: ask for an intro', s: 'warn' });
       if (v(f, 'next_step') === 'None') flags.push({ m: 'No next step agreed', s: 'out' });
       if (!flags.length) flags.push({ m: 'Clean deal, no flags', s: 'ok' });
-      const T = { Now: 'This month', Quarter: 'This quarter', Later: 'Later or unknown' }, B = { Confirmed: 'Confirmed', Vague: 'Vague', TooHigh: 'Objection: too high', NotDiscussed: 'Not discussed' };
-      const D = { Yes: 'Yes', No: 'Needs sign-off', Unknown: 'Unclear' }, N = { Proposal: 'Send proposal', Demo: 'Book demo', Call: 'Follow-up call', None: 'None agreed' };
+      const T = { Now: 'This month', Quarter: 'This quarter', Later: 'Later or unknown' }, B = { Confirmed: 'Confirmed', Quoted: 'Price quoted', Vague: 'Vague', TooHigh: 'Objection: too high', NotDiscussed: 'Not discussed' };
+      const D = { Yes: 'Yes', No: 'Needs sign-off', Unknown: 'Unclear' }, N = { Proposal: 'Send proposal', Payment: 'Send payment link', Demo: 'Book demo', Call: 'Follow-up call', None: 'None agreed' };
       return {
         rows: [[v(f, 'interest'), low(f, 'interest')], [B[v(f, 'budget')]], [T[v(f, 'timeline')]], [D[v(f, 'decision_maker')]], [N[v(f, 'next_step')]]],
         flags, ok: true, extra: { kind: 'score', score, band }, toast: 'Saved: ' + band + ' deal, score ' + score,
