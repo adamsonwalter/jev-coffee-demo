@@ -1,6 +1,6 @@
 // Soft pip on each recognition and Steve's bark, synthesised in the browser (no audio files).
 // Unlocked from a tap; if it ever collides with the mic (recognition dies at once), it switches itself off.
-(function () {
+const audio = (function () {
   let ctx = null, off = false, lastPip = 0;
   const A = {
     unlock() {
@@ -52,5 +52,7 @@
       o.connect(f); ns.connect(ng); ng.connect(f); f.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + dur); ns.start(t);
     },
   };
-  window.JevAudio = A;
+  return A;
 })();
+
+export default audio;

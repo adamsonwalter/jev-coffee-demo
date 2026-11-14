@@ -23,11 +23,12 @@ const demo = {
   say: 'Tell me what car you need and for how long',
   chips: ['An SUV for a week, one way to Sydney', 'A small car for the weekend, my son is 22'],   // rotating "Try saying" lines
   labels: ['Vehicle', 'Length', 'Drivers', 'Return'],   // row labels, in the order render() returns rows
-  rowKeys: ['vehicle', 'days', null, null],             // the question behind each row (null if none). Lets the final check rewrite a row
+  rowKeys: ['vehicle', 'days', ['young_driver'], null],  // the question(s) behind each row: a key, a list of keys, or null. Lets the final check rewrite a row
   confirm: 'Reserve car',
   maxFlags: 3,                        // optional: cap the warning chips so the fields keep the screen
 
   // f = Jev's answers: f.vehicle = { value: 'Suv', confidence: 0.97, p: { Suv: 0.97, … } }
+  // Optional: put prices, stock lists or weights in `data` and read them in render(f, data = demo.data), so they can be changed without touching the logic.
   render(f) {
     const vehicle = v(f, 'vehicle'), days = v(f, 'days');
     if (!vehicle) return { rows: [[null], [null], [null], [null]], flags: [], ok: false };   // nothing heard yet

@@ -1,6 +1,6 @@
 // Demo: coffee. One self-contained file: the questions Jev is asked, what the screen shows, and the arithmetic.
 // (Copy demos/_template.mjs to make a new one, then add one line to demos/index.mjs.)
-import { v, yes, low, pr, yn, ch } from './lib.mjs';
+import { v, yes, low, pr, yn, ch, TUNING } from './lib.mjs';
 
 // What Jev is asked. Each key becomes a typed question; answers arrive as fields[key] = { value, confidence, p }.
 const questions = {
@@ -58,7 +58,8 @@ const questions = {
 };
 
 // ---------- COFFEE (home) ----------
-const stock = { Oat: true, Almond: 'low', Soy: false, Skim: true, 'Full cream': true, croissant: false, cookie: false, muffin: true, extra_shot: true, syrup: true };
+// Editable tables: pass a different `data` to render() to change them without touching the logic.
+const DEFAULT_STOCK = { Oat: true, Almond: 'low', Soy: false, Skim: true, 'Full cream': true, croissant: false, cookie: false, muffin: true, extra_shot: true, syrup: true };
 const COLD_OK = ['Cold Brew'];
 const coffee = {
   id: 'coffee', tab: 'Coffee', title: ['Jev', 'Coffee'],
@@ -81,15 +82,18 @@ const coffee = {
     'A babycino for the kid',
   ],
   labels: ['Drink', 'Size', 'Milk', 'Temp', 'Extras', 'Food'],
-  rowKeys: ['drink', 'size', 'milk', null, null, null],   // the question behind each row (null: none). Lets the final check rewrite a row
+  // The question(s) behind each row: a key, a list of keys, or null. Lets the final check rewrite a row.
+  rowKeys: ['drink', 'size', 'milk', ['extra_hot', 'iced', 'no_ice_milk_top'], ['extra_shot', 'syrup', 'caf', 'no_foam', 'sugar_in_shot'], ['croissant', 'muffin', 'cookie']],
   confirm: 'Confirm order',
   maxFlags: 3,
-  render(f) {
+  data: { stock: DEFAULT_STOCK },
+  render(f, data = coffee.data) {
+    const stock = data.stock;
     const drink = f.drink && f.drink.value !== 'None' ? v(f, 'drink') : null;
-    const sizeV = f.size && f.size.value !== 'Unspecified' && (f.size.confidence == null || f.size.confidence >= 0.6) ? v(f, 'size') : null;
+    const sizeV = f.size && f.size.value !== 'Unspecified' && (f.size.confidence == null || f.size.confidence >= TUNING.guess) ? v(f, 'size') : null;
     const size = sizeV || (drink ? 'Medium' : null);
     const milk = f.milk && f.milk.value !== 'Unspecified' ? v(f, 'milk') : null;
-    const iced = yes(f, 'iced') && (f.iced.confidence == null || f.iced.confidence >= 0.6);
+    const iced = yes(f, 'iced') && (f.iced.confidence == null || f.iced.confidence >= TUNING.guess);
     const mods = [], food = [];
     if (yes(f, 'extra_shot')) mods.push('Extra shot');
     if (yes(f, 'syrup')) mods.push('Vanilla syrup');

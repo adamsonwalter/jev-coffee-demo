@@ -14,6 +14,14 @@ const questions = {
 };
 
 // ---------- SALES NOTES ----------
+// Editable scoring weights (points out of 100): pass a different `data` to render() to re-weight without touching the logic.
+const DATA = {
+  interest: { Hot: 40, Warm: 22, Cold: 5 },
+  budget: { Confirmed: 20, Quoted: 12, Vague: 10, NotDiscussed: 6, TooHigh: 2 },
+  timeline: { Now: 15, Quarter: 10, Later: 3 },
+  decisionMaker: { Yes: 15, No: 6, Unknown: 3 },
+  nextStep: { Proposal: 10, Payment: 12, Demo: 10, Call: 6, None: 0 },
+};
 const sales = {
   id: 'sales', tab: 'Sales', title: ['Jev', 'Sales Notes'],
   say: 'Dictate your call notes in your own words',
@@ -25,13 +33,14 @@ const sales = {
   labels: ['Interest', 'Budget', 'Timeline', 'Decision maker', 'Next step'],
   rowKeys: ['interest', 'budget', 'timeline', 'decision_maker', 'next_step'],   // the question behind each row (null: none). Lets the final check rewrite a row
   confirm: 'Save to CRM',
-  render(f) {
+  data: DATA,
+  render(f, data = sales.data) {
     if (!f.interest) return { rows: [[null], [null], [null], [null], [null]], flags: [], ok: false };
-    const interest = 40 * pr(f, 'interest', 'Hot') + 22 * pr(f, 'interest', 'Warm') + 5 * pr(f, 'interest', 'Cold');
-    const bud = { Confirmed: 20, Quoted: 12, Vague: 10, NotDiscussed: 6, TooHigh: 2 }[v(f, 'budget')] || 0;
-    const tl = { Now: 15, Quarter: 10, Later: 3 }[v(f, 'timeline')] || 0;
-    const dm = { Yes: 15, No: 6, Unknown: 3 }[v(f, 'decision_maker')] || 0;
-    const nx = { Proposal: 10, Payment: 12, Demo: 10, Call: 6, None: 0 }[v(f, 'next_step')] || 0;
+    const interest = Object.entries(data.interest).reduce((sum, [opt, pts]) => sum + pts * pr(f, 'interest', opt), 0);
+    const bud = data.budget[v(f, 'budget')] || 0;
+    const tl = data.timeline[v(f, 'timeline')] || 0;
+    const dm = data.decisionMaker[v(f, 'decision_maker')] || 0;
+    const nx = data.nextStep[v(f, 'next_step')] || 0;
     let score = interest + bud + tl + dm + nx - (yes(f, 'stall') ? 10 : 0) - (yes(f, 'competitor') ? 5 : 0);
     score = Math.max(0, Math.min(100, Math.round(score)));
     const band = score >= 70 ? 'Hot' : score >= 40 ? 'Warm' : 'Cold';

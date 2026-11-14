@@ -47,9 +47,12 @@ const questions = {
 
 // ---------- QUOTE ----------
 // Illustrative rate card (AUD). Replace with the business's own rates.
-const SCOPE = { Small: [350, 1200], Medium: [1500, 5500], Large: [6500, 22000] };
-const TRADE_X = { Bathroom: 1.2, Roofing: 1.1 };
-const FIXED = { Blocked: [180, 450], Burst: [250, 800], Leak: [200, 700], Power: [150, 450], HotWater: [1200, 3500], Gas: [200, 600], Climate: [250, 1200], Lockout: [150, 350], Garage: [200, 900] };
+// Editable rate card (illustrative AUD): pass a different `data` to render() to change prices without touching the logic.
+const DATA = {
+  scope: { Small: [350, 1200], Medium: [1500, 5500], Large: [6500, 22000] },   // base range by job size
+  tradeX: { Bathroom: 1.2, Roofing: 1.1 },                                     // trade multipliers
+  fixed: { Blocked: [180, 450], Burst: [250, 800], Leak: [200, 700], Power: [150, 450], HotWater: [1200, 3500], Gas: [200, 600], Climate: [250, 1200], Lockout: [150, 350], Garage: [200, 900] },   // callouts priced by issue, not size
+};
 const TRADE = { Plumbing: 'Plumber', Electrical: 'Sparky', Gas: 'Gas fitter', Climate: 'Fridgy / HVAC', Carpentry: 'Chippy', Bricklaying: 'Bricky', Roofing: 'Roofer', Bathroom: 'Bathroom / kitchen', Painting: 'Painter', Landscaping: 'Concreter / landscaper', Fencing: 'Fencer', Pest: 'Pestie', Locksmith: 'Locksmith', Other: 'Other' };
 const ISSUE = { Blocked: 'Blocked drain or toilet', Burst: 'Burst pipe or tap', Leak: 'Leak', Power: 'Power failure', HotWater: 'Hot water system', Gas: 'Gas leak', Climate: 'Heating or cooling down', Lockout: 'Lockout', Garage: 'Garage door', Install: 'Install or upgrade', Repair: 'Repair or maintenance', Reno: 'Renovation', Pest: 'Pest treatment', Other: 'Other' };
 const quote = {
@@ -71,11 +74,12 @@ const quote = {
   rowKeys: ['trade', 'issue', 'scope', 'access', 'urgency', 'materials'],   // the question behind each row (null: none). Lets the final check rewrite a row
   confirm: 'Send range to customer',
   maxFlags: 4,
-  render(f) {
+  data: DATA,
+  render(f, data = quote.data) {
     const trade = v(f, 'trade'), issue = v(f, 'issue'), scope = v(f, 'scope');
     if (!trade || !scope) return { rows: [[null], [null], [null], [null], [null], [null]], flags: [], ok: false };
-    const fixed = FIXED[issue];
-    let [lo, hi] = fixed || SCOPE[scope]; if (!fixed) { const x = TRADE_X[trade] || 1; lo *= x; hi *= x; }
+    const fixed = data.fixed[issue];
+    let [lo, hi] = fixed || data.scope[scope]; if (!fixed) { const x = data.tradeX[trade] || 1; lo *= x; hi *= x; }
     const flags = [], adds = [], add = (m, s2) => flags.push({ m, s: s2 });
     const urg = v(f, 'urgency');
     if (issue === 'Gas') add('Gas smell: leave the house, call the gas emergency line, then book', 'out');
