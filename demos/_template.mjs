@@ -23,6 +23,7 @@ const demo = {
   say: 'Tell me what car you need and for how long',
   chips: ['An SUV for a week, one way to Sydney', 'A small car for the weekend, my son is 22'],   // rotating "Try saying" lines
   labels: ['Vehicle', 'Length', 'Drivers', 'Return'],   // row labels, in the order render() returns rows
+  rowKeys: ['vehicle', 'days', null, null],             // the question behind each row (null if none). Lets the final check rewrite a row
   confirm: 'Reserve car',
   maxFlags: 3,                        // optional: cap the warning chips so the fields keep the screen
 

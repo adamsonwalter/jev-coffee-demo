@@ -23,6 +23,7 @@ const sales = {
     'Met the owner, signed budget of fifty thousand, wants to start this month, book a demo for Tuesday',
   ],
   labels: ['Interest', 'Budget', 'Timeline', 'Decision maker', 'Next step'],
+  rowKeys: ['interest', 'budget', 'timeline', 'decision_maker', 'next_step'],   // the question behind each row (null: none). Lets the final check rewrite a row
   confirm: 'Save to CRM',
   render(f) {
     if (!f.interest) return { rows: [[null], [null], [null], [null], [null]], flags: [], ok: false };

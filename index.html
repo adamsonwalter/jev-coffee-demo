@@ -53,6 +53,7 @@
   .row .v { font: 600 20px/1.15 ui-serif, "New York", Georgia, serif; color: var(--cream); text-align: right; transition: color .25s; }
   .row .v.empty { color: #7b5a45; font-weight: 400; }
   .row .v.flash { color: var(--amber); }
+  .row .v small.final { color: #9ad0ff; }
   .row .v.settle { color: var(--ok); transition: color .9s; }
   .row .v small { display: block; font: 12px ui-rounded, sans-serif; color: var(--warn); margin-top: 2px; }
   .banner { margin: 12px 0 2px; padding: 12px 14px; border-radius: 14px; background: rgba(255,138,120,.16); border: 1px solid var(--out); color: #ffd3cb; }
@@ -150,7 +151,7 @@ const standalone = navigator.standalone === true || matchMedia('(display-mode: s
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const noVoice = () => !SR || (isIOS && standalone);
 
-let lastFields = null, lastText = '', sweepTimer = null, demo = DEMOS[0], seq = 0, ctl = null, debounce = null, jevDownAt = 0, lastRender = null;
+let pins = {}, lastChecked = '', lastFields = null, lastText = '', sweepTimer = null, demo = DEMOS[0], seq = 0, ctl = null, debounce = null, jevDownAt = 0, lastRender = null;
 
 function say(text, cls) { sayEl.textContent = cls === 'heard' && window.Censor ? Censor.mask(text) : text; sayEl.className = 'say' + (cls ? ' ' + cls : ''); }
 function toast(t) { const n = $('toast'); n.textContent = t; n.classList.add('show'); setTimeout(() => n.classList.remove('show'), 2400); }
@@ -162,7 +163,7 @@ function buildTabs() {
   DEMOS.forEach((d) => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = d.tab; b.dataset.id = d.id; b.onclick = () => { if (window.JevAudio && !listening) JevAudio.unlock(); select(d.id); }; $('tabs').appendChild(b); });
 }
 function select(id) {
-  stopListening(); seq++; clearTimeout(debounce); ctl && ctl.abort();
+  stopListening(); seq++; clearTimeout(debounce); debounce = null; ctl && ctl.abort();
   demo = DEMOS.find((d) => d.id === id) || DEMOS[0];
   try { history.replaceState(null, '', demo.id === 'coffee' ? location.pathname : '#' + demo.id); } catch (_) {}
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.id === demo.id));
@@ -185,7 +186,7 @@ function startTry() {
   if (demo.chips.length > 1) tryTimer = setInterval(show, 5000);
 }
 function resetOutput() {
-  lastFields = null; lastText = ''; clearTimeout(sweepTimer);
+  lastFields = null; lastText = ''; pins = {}; lastChecked = ''; clearTimeout(sweepTimer);
   rowsEl.querySelectorAll('.v').forEach((n) => { n.className = 'v empty'; n.textContent = '—'; }); $('under').innerHTML = '';
   risksEl.innerHTML = ''; $('banner').innerHTML = ''; $('extra').innerHTML = '';
   confirmBtn.disabled = true; confirmBtn.className = ''; confirmBtn.textContent = demo.confirm; lastRender = null;
@@ -227,7 +228,7 @@ async function interpret(text, mySeq, extra) {
 }
 
 // ---------- render ----------
-function render(f, settle) {
+function render(f, settle, tags) {
   const out = demo.render(f);
   if (!out.rows.some((r) => r && r[0]) && !(out.flags || []).length) out.flags = [{ m: 'Heard you, but no order details yet. Keep talking.', s: 'warn' }];
   lastRender = out;
@@ -238,12 +239,14 @@ function render(f, settle) {
     n.classList.toggle('empty', !val);
     if (base !== text) { n.textContent = text; n.classList.add(settle ? 'settle' : 'flash'); setTimeout(() => n.classList.remove('flash', 'settle'), settle ? 1100 : 450); changed = true; }
     const old = n.querySelector('small'); if (old) old.remove();
-    if (val && lowConf) { const s = document.createElement('small'); s.textContent = 'not sure — check'; n.appendChild(s); }
+    const tag = tags && tags[i];
+    if (val && lowConf && !tag) { const s = document.createElement('small'); s.textContent = 'not sure — check'; n.appendChild(s); }
+    if (val && tag) { const s = document.createElement('small'); s.className = 'final'; s.textContent = tag.kind === 'revised' ? 'final check: was ' + tag.was : 'final check: doesn’t fit what was said'; n.appendChild(s); }
   });
   const und = $('under'); und.innerHTML = '';
-  const said = out.rows.filter((r) => r && r[0] && r[0] !== 'None').map((r) => r[0]);
+  const said = out.rows.filter((r) => r && r[0] && r[0] !== 'None' && r[0] !== '—').map((r) => r[0]);
   if (said.length) { und.innerHTML = '<b>Understood</b><span></span>'; und.lastChild.textContent = said.join(' · '); }
-  if (changed && window.JevAudio) JevAudio.pip();
+  if (changed && !tags && window.JevAudio) JevAudio.pip();
   const b = $('banner'); b.innerHTML = '';
   if (out.banner) { const d = document.createElement('div'); d.className = 'banner'; d.innerHTML = '<b></b><span></span>'; d.firstChild.textContent = out.banner.title; d.lastChild.textContent = out.banner.body; b.appendChild(d); }
   risksEl.innerHTML = '';
@@ -271,31 +274,69 @@ function render(f, settle) {
 async function handleText(text) {
   const mySeq = ++seq;
   const f = await interpret(text, mySeq);
-  if (f && mySeq === seq) { lastFields = f; lastText = text; render(f); armSweep(); }
+  if (f && mySeq === seq) {
+    for (const k in pins) if (f[k] && f[k].value !== pins[k].value && (f[k].confidence == null || f[k].confidence < 0.97)) f[k] = pins[k];   // keep final-check rewrites
+    lastFields = f; lastText = text; render(f); armSweep();
+  }
 }
 
 // ---------- settling pass: after a pause or when the mic stops, re-check only the uncertain fields ----------
 function armSweep() { clearTimeout(sweepTimer); if (listening) sweepTimer = setTimeout(sweep, 2200); }
 async function sweep() {
   clearTimeout(sweepTimer);
-  if (!lastFields || !lastText) return;
-  const keys = Object.keys(lastFields).filter((k) => lastFields[k].confidence != null && lastFields[k].confidence < 0.8);
-  if (!keys.length || Date.now() - jevDownAt < 15000) return;
-  const mySeq = seq, t0 = performance.now();
-  setEngine('jev busy', 'Jev checking ' + keys.length + '…');
-  ctl && ctl.abort(); ctl = new AbortController();
+  if (!lastFields || !lastText || Date.now() - jevDownAt < 15000) return;
+  const mySeq = seq, text = lastText, post = (body) => fetch('/api/order', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ demo: demo.id, transcript: text }, body)), signal: ctl.signal }).then((r) => { if (!r.ok) throw new Error('status ' + r.status); return r.json(); });
   try {
-    const r = await fetch('/api/order', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ demo: demo.id, transcript: lastText, final: true, only: keys }), signal: ctl.signal });
-    if (!r.ok) throw new Error('status ' + r.status);
-    const d = await r.json();
-    if (mySeq !== seq) return;            // newer speech arrived: ignore
-    const merged = Object.assign({}, lastFields);
-    keys.forEach((k) => { if (d.fields && d.fields[k]) merged[k] = d.fields[k]; });
-    lastFields = merged; render(merged, true);
-    setEngine('jev', 'Jev · settled ' + Math.round(performance.now() - t0) + ' ms');
+    // 1. settle: re-ask only the uncertain fields on the whole conversation
+    const keys = Object.keys(lastFields).filter((k) => lastFields[k].confidence != null && lastFields[k].confidence < 0.8);
+    if (keys.length) {
+      const t0 = performance.now();
+      setEngine('jev busy', 'Jev checking ' + keys.length + '…');
+      ctl && ctl.abort(); ctl = new AbortController();
+      const d = await post({ final: true, only: keys });
+      if (mySeq !== seq) return;            // newer speech arrived: ignore
+      const merged = Object.assign({}, lastFields);
+      keys.forEach((k) => { if (d.fields && d.fields[k]) merged[k] = d.fields[k]; });
+      lastFields = merged; render(merged, true);
+      setEngine('jev', 'Jev · settled ' + Math.round(performance.now() - t0) + ' ms');
+    }
+    // 2. final check: audit what is on screen against what was said, rewrite clear mismatches
+    if (text !== lastChecked && lastRender) {
+      lastChecked = text;
+      const shown = [];
+      lastRender.rows.forEach((r, i) => { const val = r && r[0]; if (val && val !== 'None' && val !== '—') shown.push({ i, label: demo.labels[i], value: val }); });
+      if (!shown.length) return;
+      setEngine('jev busy', 'Final check…');
+      ctl && ctl.abort(); ctl = new AbortController();
+      const a = await post({ mode: 'audit', shown: shown.map((x) => ({ label: x.label, value: x.value })) });
+      if (mySeq !== seq) return;
+      const tags = {}, merged = Object.assign({}, lastFields); let revised = 0, doubts = 0;
+      for (let j = 0; j < shown.length; j++) {
+        const au = a.audit && a.audit[j];
+        if (!au || au.fits >= 0.15) continue;            // only clear mismatches (Jev gives "fits" under 15%)
+        const i = shown[j].i, key = (demo.rowKeys || [])[i];
+        if (key && lastFields[key]) {
+          const w = await post({ mode: 'rewrite', key, exclude: lastFields[key].value });
+          if (mySeq !== seq) return;
+          const nf = w.field;
+          if (nf && nf.value && nf.value !== 'NoFit' && nf.confidence != null && nf.confidence >= 0.7) { merged[key] = nf; pins[key] = nf; tags[i] = { kind: 'revised', was: shown[j].value }; revised++; continue; }
+        }
+        tags[i] = { kind: 'doubt' }; doubts++;
+      }
+      if (!revised && !doubts) { setEngine('jev', 'Jev · final check clean'); return; }
+      lastFields = merged; render(merged, true, tags);
+      if (window.JevAudio) JevAudio.finalCheck();
+      setEngine('jev', 'Jev · final check: ' + [revised && revised + ' revised', doubts && doubts + ' to check'].filter(Boolean).join(', '));
+    }
   } catch (e) { if (e.name !== 'AbortError') setEngine('jev', 'Jev · live'); }
 }
-function handleTextDebounced(text) { clearTimeout(debounce); debounce = setTimeout(() => handleText(text), 250); }
+// Throttle, not debounce: while someone talks continuously, still refresh the fields about every 0.6 s.
+let pendingText = '', lastFire = 0;
+function handleTextDebounced(text) {
+  pendingText = text;
+  if (debounce) return;
+  debounce = setTimeout(() => { debounce = null; lastFire = Date.now(); handleText(pendingText); }, Math.max(150, 600 - (Date.now() - lastFire)));
+}
 function heard(text) { if (window.Steve) Steve.check(text); if (window.Censor) Censor.check(text); }
 function resetFx() { if (window.Steve) Steve.reset(); if (window.Censor) Censor.reset(); }
 
@@ -333,7 +374,7 @@ function newSession() {
 
 function startListening() {
   if (noVoice()) { say(isIOS && standalone ? 'iPhone doesn’t allow voice inside home-screen apps. Open this page in Safari to talk.' : 'This browser has no speech recognition. Use Safari or Chrome.', 'err'); return; }
-  prefix = ''; lastFull = ''; gotAny = false; quickEnds = 0; resetFx();
+  prefix = ''; lastFull = ''; gotAny = false; quickEnds = 0; pins = {}; lastChecked = ''; resetFx();
   newSession(); listening = true;
   try { rec.start(); } catch (err) { stopUI(); say('Couldn’t start the mic: ' + err.message, 'err'); return; }
   if (window.JevAudio) JevAudio.unlock();   // after rec.start(), same tap
@@ -343,7 +384,7 @@ function startListening() {
 function stopListening() { const was = listening; listening = false; try { rec && rec.stop(); } catch (_) {} stopUI(); if (was) setTimeout(sweep, 350); }
 micBtn.addEventListener('click', () => (listening ? stopListening() : startListening()));
 
-$('clear').addEventListener('click', () => { stopListening(); seq++; clearTimeout(debounce); ctl && ctl.abort(); resetOutput(); setEngine('', 'ready'); resetFx(); });
+$('clear').addEventListener('click', () => { stopListening(); seq++; clearTimeout(debounce); debounce = null; ctl && ctl.abort(); resetOutput(); setEngine('', 'ready'); resetFx(); });
 confirmBtn.addEventListener('click', () => {
   if (!lastRender) return;
   if (navigator.vibrate) navigator.vibrate(40);

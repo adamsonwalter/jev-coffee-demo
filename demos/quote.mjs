@@ -14,7 +14,8 @@ const questions = {
     Roofing: "Roofing: roofer, tiles, flashing, gutters",
     Bathroom: "Bathroom, kitchen or tiling renovation: tiler",
     Painting: "Painting or plastering",
-    Landscaping: "Landscaping, concreting, paving or fencing: concreter, landscaper",
+    Landscaping: "Landscaping, concreting or paving: concreter, landscaper",
+    Fencing: "Fencing: fencer, timber paling or Colorbond fences, gates, fence repairs",
     Pest: "Pest control: pestie, termites, rodents, spiders, ants",
     Locksmith: "Locksmith or garage doors",
     Other: "Anything else or unclear",
@@ -49,7 +50,7 @@ const questions = {
 const SCOPE = { Small: [350, 1200], Medium: [1500, 5500], Large: [6500, 22000] };
 const TRADE_X = { Bathroom: 1.2, Roofing: 1.1 };
 const FIXED = { Blocked: [180, 450], Burst: [250, 800], Leak: [200, 700], Power: [150, 450], HotWater: [1200, 3500], Gas: [200, 600], Climate: [250, 1200], Lockout: [150, 350], Garage: [200, 900] };
-const TRADE = { Plumbing: 'Plumber', Electrical: 'Sparky', Gas: 'Gas fitter', Climate: 'Fridgy / HVAC', Carpentry: 'Chippy', Bricklaying: 'Bricky', Roofing: 'Roofer', Bathroom: 'Bathroom / kitchen', Painting: 'Painter', Landscaping: 'Concreter / landscaper', Pest: 'Pestie', Locksmith: 'Locksmith', Other: 'Other' };
+const TRADE = { Plumbing: 'Plumber', Electrical: 'Sparky', Gas: 'Gas fitter', Climate: 'Fridgy / HVAC', Carpentry: 'Chippy', Bricklaying: 'Bricky', Roofing: 'Roofer', Bathroom: 'Bathroom / kitchen', Painting: 'Painter', Landscaping: 'Concreter / landscaper', Fencing: 'Fencer', Pest: 'Pestie', Locksmith: 'Locksmith', Other: 'Other' };
 const ISSUE = { Blocked: 'Blocked drain or toilet', Burst: 'Burst pipe or tap', Leak: 'Leak', Power: 'Power failure', HotWater: 'Hot water system', Gas: 'Gas leak', Climate: 'Heating or cooling down', Lockout: 'Lockout', Garage: 'Garage door', Install: 'Install or upgrade', Repair: 'Repair or maintenance', Reno: 'Renovation', Pest: 'Pest treatment', Other: 'Other' };
 const quote = {
   id: 'quote', tab: 'Quote', title: ['Jev', 'Quote'],
@@ -67,6 +68,7 @@ const quote = {
     'Repaint three bedrooms in a new house, any day, flexible',
   ],
   labels: ['Trade', 'Issue', 'Scope', 'Access', 'When', 'Materials'],
+  rowKeys: ['trade', 'issue', 'scope', 'access', 'urgency', 'materials'],   // the question behind each row (null: none). Lets the final check rewrite a row
   confirm: 'Send range to customer',
   maxFlags: 4,
   render(f) {

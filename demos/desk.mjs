@@ -25,6 +25,7 @@ const desk = {
     'I have had tight chest pain since this morning and it goes down my arm, can I come in today',
   ],
   labels: ['Reason', 'Urgency', 'Patient', 'When'],
+  rowKeys: ['reason', 'urgency', 'patient', null],   // the question behind each row (null: none). Lets the final check rewrite a row
   confirm: 'Book appointment',
   render(f) {
     if (!f.reason) return { rows: [[null], [null], [null], [null]], flags: [], ok: false };

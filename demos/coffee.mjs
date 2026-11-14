@@ -81,6 +81,7 @@ const coffee = {
     'A babycino for the kid',
   ],
   labels: ['Drink', 'Size', 'Milk', 'Temp', 'Extras', 'Food'],
+  rowKeys: ['drink', 'size', 'milk', null, null, null],   // the question behind each row (null: none). Lets the final check rewrite a row
   confirm: 'Confirm order',
   maxFlags: 3,
   render(f) {

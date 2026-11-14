@@ -17,6 +17,16 @@
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
       o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.1);
     },
+    // "Final check": two quick rising notes, clearly different from the pip.
+    finalCheck() {
+      if (!ctx || off || ctx.state !== 'running') return;
+      [[660, 0], [990, 0.16]].forEach(([f, d]) => {
+        const t = ctx.currentTime + d, o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+        o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.34);
+      });
+    },
     // Loud 1 kHz censor bleep, about 0.6 s.
     bleep() {
       if (!ctx || off || ctx.state !== 'running') return;
