@@ -17,6 +17,11 @@ const randomAnswers = (d) => {
   return f;
 };
 
+import { existsSync } from 'node:fs';
+test('a demo\'s video file exists in the repo', () => {
+  for (const d of DEMOS.filter((x) => x.video)) assert.ok(existsSync(new URL('..' + d.video, import.meta.url)), `${d.id}: ${d.video} is missing`);
+});
+
 test('ids are unique', () => assert.equal(new Set(DEMOS.map((d) => d.id)).size, DEMOS.length));
 
 for (const d of [...DEMOS, template]) {

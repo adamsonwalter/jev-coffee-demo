@@ -34,6 +34,7 @@ function select(id) {
   document.title = demo.id === DEMOS[0].id ? 'Jev ' + demo.title[1] : 'Jev · ' + demo.tab;
   rowsEl.textContent = '';
   demo.labels.forEach((l) => { const r = el('div', 'row'); r.append(el('label', '', l), el('div', 'v empty', '—')); rowsEl.appendChild(r); });
+  $('demoBtn').hidden = !demo.video;
   startTry(); fx.tab(demo.id);
   resetOutput(); setEngine('', 'ready'); fx.reset();
 }
@@ -207,6 +208,18 @@ if (iosApp) {
     setTimeout(() => { try { window.open(url, '_blank'); } catch (_) {} }, 600);   // fallback if that scheme is ignored
   });
 }
+
+// ---------- demo video: opens full screen, plays on tap, closes on × / backdrop / Escape ----------
+function closeVideo() { const v = $('playerVideo'); v.pause(); v.removeAttribute('src'); v.load(); $('player').hidden = true; }
+$('demoBtn').addEventListener('click', () => {
+  if (!demo.video) return;
+  listener.stop(); fx.unlock();
+  const v = $('playerVideo'); v.src = demo.video; $('player').hidden = false;
+  v.play().catch(() => {});   // if autoplay is refused, the controls are right there
+});
+$('playerClose').addEventListener('click', closeVideo);
+$('player').addEventListener('click', (e) => { if (e.target === $('player')) closeVideo(); });
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('player').hidden) closeVideo(); });
 
 // ---------- boot ----------
 buildTabs();

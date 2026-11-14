@@ -30,6 +30,7 @@
     <div id="banner"></div>
     <div class="risks" id="risks"></div>
     <div id="extra"></div>
+    <div class="demorow"><button id="demoBtn" class="demobtn" hidden aria-label="Watch the demo video"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 1l7 4-7 4z"/></svg>Demo</button></div>
   </section>
 
   <div class="say idle" id="say"></div>
@@ -52,6 +53,10 @@
 </div>
 <div class="toast" id="toast"></div>
 <main id="backend" hidden></main>
+<div id="player" hidden>
+  <button id="playerClose" aria-label="Close video">×</button>
+  <video id="playerVideo" controls playsinline preload="none"></video>
+</div>
 <div id="bounce" hidden>
   <h2>Open in Safari to talk</h2>
   <p>This icon opened the app without Safari, and iPhone blocks the microphone there.</p>

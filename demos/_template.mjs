@@ -25,6 +25,7 @@ const demo = {
   labels: ['Vehicle', 'Length', 'Drivers', 'Return'],   // row labels, in the order render() returns rows
   rowKeys: ['vehicle', 'days', ['young_driver'], null],  // the question(s) behind each row: a key, a list of keys, or null. Lets the final check rewrite a row
   confirm: 'Reserve car',
+  // video: '/media/rental.mp4',   // optional: shows a small Demo button under the card that plays this video (put the file in media/)
   maxFlags: 3,                        // optional: cap the warning chips so the fields keep the screen
 
   // f = Jev's answers: f.vehicle = { value: 'Suv', confidence: 0.97, p: { Suv: 0.97, … } }

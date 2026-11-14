@@ -161,3 +161,13 @@ body.be .wrap, body.be .toast { display: none; }
 .scen:active { background: #e6eefb; }
 .be-hint { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #e1f3e8; color: #1f6b43; font-size: 13.5px; line-height: 1.4; }
 .be-hint em { font-style: normal; font-weight: 600; }
+
+/* Demo video: a tiny button at the bottom edge of the order frame, and a full-screen player */
+.demorow { display: flex; justify-content: flex-end; margin: 0 -10px -12px 0; }
+.demobtn { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; color: var(--dim); font: 600 11px ui-rounded, sans-serif; letter-spacing: .6px; text-transform: uppercase; padding: 12px 10px 12px 18px; opacity: .8; }
+.demobtn[hidden] { display: none; }
+.demobtn svg { width: 9px; height: 9px; fill: currentColor; }
+#player { position: fixed; inset: 0; z-index: 120; background: rgba(12, 6, 3, .96); display: flex; align-items: center; justify-content: center; padding: calc(var(--sat) + 12px) 12px calc(var(--sab) + 12px); }
+#player[hidden] { display: none; }
+#playerVideo { max-width: 100%; max-height: 100%; border-radius: 14px; background: #000; }
+#playerClose { position: absolute; top: calc(var(--sat) + 10px); right: 14px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(250, 238, 214, .16); color: var(--cream); font: 400 28px/1 ui-rounded, sans-serif; z-index: 1; }

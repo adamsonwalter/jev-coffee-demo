@@ -71,6 +71,7 @@ const COLD_OK = ['Cold Brew'];
 const coffee = {
   id: 'coffee', tab: 'Coffee', title: ['Jev', 'Coffee'],
   say: 'Tap the mic and say your order',
+  video: '/media/friday-rush.mp4',   // optional: a small Demo button under the card plays this video
   // Unusual orders rotate one at a time under the mic so the fields keep the screen.
   chips: [
     'A flat white please',
