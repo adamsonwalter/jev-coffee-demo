@@ -100,14 +100,44 @@ const COFFEE = {
 };
 
 const QUOTE = {
-  trade: ch({ Plumbing: "Plumbing, drains, hot water, taps", Electrical: "Electrical, wiring, switchboard, lighting", Painting: "Painting or plastering", Bathroom: "Bathroom, kitchen or tiling renovation", Roofing: "Roof, gutters, leaks from above", Carpentry: "Carpentry, decking, framing, doors", Landscaping: "Landscaping, fencing, concreting", Other: "Anything else or unclear" }),
+  trade: ch({
+    Plumbing: "Plumbing: plumber, drains, taps, toilets, dunny diver, drain surgeon",
+    Electrical: "Electrical: electrician, sparky, wiring, switchboard, lights, power points, EV charger, solar",
+    Gas: "Gas fitting: gas appliances, gas lines, gas leaks",
+    Climate: "Heating, cooling and refrigeration: fridgy, air conditioning, ducted heating",
+    Carpentry: "Carpentry: chippy, carpenter, joiner, decks, doors, timber, cabinetry",
+    Bricklaying: "Bricklaying or masonry: bricky",
+    Roofing: "Roofing: roofer, tiles, flashing, gutters",
+    Bathroom: "Bathroom, kitchen or tiling renovation: tiler",
+    Painting: "Painting or plastering",
+    Landscaping: "Landscaping, concreting, paving or fencing: concreter, landscaper",
+    Pest: "Pest control: pestie, termites, rodents, spiders, ants",
+    Locksmith: "Locksmith or garage doors",
+    Other: "Anything else or unclear",
+  }),
+  issue: ch({
+    Blocked: "Blocked pipe, toilet or drain",
+    Burst: "Burst pipe, burst tap or showerhead",
+    Leak: "Internal leak, leaking tank or leaking roof",
+    Power: "Power failure, tripping safety switch or blown fuse",
+    HotWater: "Hot water system failed or leaking",
+    Gas: "Gas leak or smell of gas",
+    Climate: "Heating or cooling breakdown",
+    Lockout: "Locked out, or a lock is broken",
+    Garage: "Garage door broken",
+    Install: "Planned install or upgrade: fan, lights, switchboard, solar, EV charger, appliance hookup, tapware",
+    Repair: "General repair or maintenance: deck, door, plasterboard, gutters, tiles, fence, paving",
+    Reno: "Renovation or rebuild",
+    Pest: "Pest treatment or inspection",
+    Other: "Anything else or unclear",
+  }),
   scope: ch({ Small: "Under one day of work", Medium: "Between two and five days of work", Large: "A week or more of work, or a full renovation" }),
   access: ch({ Easy: "Easy access, empty site, any hours", Restricted: "Restricted access: strata, limited hours, tight space, occupied home, weekends only", Unknown: "Access not mentioned" }),
   old_building: yn("Building is old (pre-1990), or fibro, asbestos, old wiring or lead paint is mentioned", "No sign of an old building"),
   hidden_risk: yn("Leak, damp, rot, termites, cracks or unknown conditions behind walls or under floors are mentioned", "No hidden-damage signals"),
   permit: yn("Work likely needs a permit, certifier or licensed sign-off (structural, gas, electrical, plumbing, removing walls)", "Unlikely to need a permit"),
   materials: ch({ Customer: "Customer supplies materials", Contractor: "Contractor supplies materials", Unspecified: "Not mentioned" }),
-  urgency: ch({ Emergency: "Emergency: active leak, no power, unsafe, needs attention today", Soon: "Wanted within the next week or two", Flexible: "Flexible timing" }),
+  urgency: ch({ Emergency: "Emergency: active leak, no power, gas smell, blocked toilet, unsafe, needs attention today", Soon: "Wanted within the next week or two", Flexible: "Flexible timing" }),
 };
 
 const DESK = {
