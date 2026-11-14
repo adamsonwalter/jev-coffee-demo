@@ -17,6 +17,18 @@
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
       o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.1);
     },
+    // Loud 1 kHz censor bleep, about 0.6 s.
+    bleep() {
+      if (!ctx || off || ctx.state !== 'running') return;
+      const t = ctx.currentTime, dur = 0.6;
+      const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = 1000; o2.type = 'sine'; o2.frequency.value = 2000;
+      const g2 = ctx.createGain(); g2.gain.value = 0.25;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.55, t + 0.015);
+      g.gain.setValueAtTime(0.55, t + dur - 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); o2.connect(g2); g2.connect(g); g.connect(ctx.destination);
+      o.start(t); o2.start(t); o.stop(t + dur); o2.stop(t + dur);
+    },
     bark() {
       if (!ctx || off || ctx.state !== 'running') return;
       const t = ctx.currentTime, dur = 0.2;

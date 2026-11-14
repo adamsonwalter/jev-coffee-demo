@@ -140,6 +140,7 @@
 <script src="/demos.js"></script>
 <script src="/audio.js"></script>
 <script src="/steve.js"></script>
+<script src="/censor.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const sayEl = $('say'), micBtn = $('mic'), micHint = $('micHint'), risksEl = $('risks'), rowsEl = $('rows');
@@ -151,7 +152,7 @@ const noVoice = () => !SR || (isIOS && standalone);
 
 let lastFields = null, lastText = '', sweepTimer = null, demo = DEMOS[0], seq = 0, ctl = null, debounce = null, jevDownAt = 0, lastRender = null;
 
-function say(text, cls) { sayEl.textContent = text; sayEl.className = 'say' + (cls ? ' ' + cls : ''); }
+function say(text, cls) { sayEl.textContent = cls === 'heard' && window.Censor ? Censor.mask(text) : text; sayEl.className = 'say' + (cls ? ' ' + cls : ''); }
 function toast(t) { const n = $('toast'); n.textContent = t; n.classList.add('show'); setTimeout(() => n.classList.remove('show'), 2400); }
 function setEngine(kind, txt) { engineEl.className = 'engine ' + kind; engineTxt.textContent = txt; }
 
@@ -170,9 +171,9 @@ function select(id) {
   document.title = demo.id === 'coffee' ? 'Jev Coffee' : 'Jev · ' + demo.tab;
   rowsEl.innerHTML = '';
   demo.labels.forEach((l) => { const r = document.createElement('div'); r.className = 'row'; r.innerHTML = '<label></label><div class="v empty">—</div>'; r.firstChild.textContent = l; rowsEl.appendChild(r); });
-  startTry();
+  startTry(); if (window.Censor) Censor.setTab(demo.id);
   resetOutput(); setEngine('', 'ready');
-  if (window.Steve) Steve.reset();
+  resetFx();
 }
 let tryTimer = null, tryIdx = 0;
 function startTry() {
@@ -295,7 +296,8 @@ async function sweep() {
   } catch (e) { if (e.name !== 'AbortError') setEngine('jev', 'Jev · live'); }
 }
 function handleTextDebounced(text) { clearTimeout(debounce); debounce = setTimeout(() => handleText(text), 250); }
-function heard(text) { if (window.Steve) Steve.check(text); }
+function heard(text) { if (window.Steve) Steve.check(text); if (window.Censor) Censor.check(text); }
+function resetFx() { resetFx(); if (window.Censor) Censor.reset(); }
 
 // ---------- speech (Safari / Chrome) ----------
 // Continuous listening where it works; falls back to phrase-by-phrase if the browser hears nothing.
@@ -331,7 +333,7 @@ function newSession() {
 
 function startListening() {
   if (noVoice()) { say(isIOS && standalone ? 'iPhone doesn’t allow voice inside home-screen apps. Open this page in Safari to talk.' : 'This browser has no speech recognition. Use Safari or Chrome.', 'err'); return; }
-  prefix = ''; lastFull = ''; gotAny = false; quickEnds = 0; if (window.Steve) Steve.reset();
+  prefix = ''; lastFull = ''; gotAny = false; quickEnds = 0; resetFx();
   newSession(); listening = true;
   try { rec.start(); } catch (err) { stopUI(); say('Couldn’t start the mic: ' + err.message, 'err'); return; }
   if (window.JevAudio) JevAudio.unlock();   // after rec.start(), same tap
@@ -341,7 +343,7 @@ function startListening() {
 function stopListening() { const was = listening; listening = false; try { rec && rec.stop(); } catch (_) {} stopUI(); if (was) setTimeout(sweep, 350); }
 micBtn.addEventListener('click', () => (listening ? stopListening() : startListening()));
 
-$('clear').addEventListener('click', () => { stopListening(); seq++; clearTimeout(debounce); ctl && ctl.abort(); resetOutput(); setEngine('', 'ready'); if (window.Steve) Steve.reset(); });
+$('clear').addEventListener('click', () => { stopListening(); seq++; clearTimeout(debounce); ctl && ctl.abort(); resetOutput(); setEngine('', 'ready'); resetFx(); });
 confirmBtn.addEventListener('click', () => {
   if (!lastRender) return;
   if (navigator.vibrate) navigator.vibrate(40);
