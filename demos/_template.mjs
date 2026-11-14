@@ -28,11 +28,18 @@ const demo = {
   maxFlags: 3,                        // optional: cap the warning chips so the fields keep the screen
 
   // f = Jev's answers: f.vehicle = { value: 'Suv', confidence: 0.97, p: { Suv: 0.97, … } }
-  // Optional: put prices, stock lists or weights in `data` and read them in render(f, data = demo.data), so they can be changed without touching the logic.
-  render(f) {
+  // The backend this demo reads and writes. Anything in `data` can be edited on the Backend screen and lives in Netlify Blobs.
+  // render(f, data) reads it (flag a stockout, suggest an alternative); `effects` below change it when the user confirms.
+  data: { stock: { Sedan: 6, Suv: 0, Van: 2 }, activity: [] },   // `activity: []` is the change log the backend shows
+  // Sections of the Backend screen: 'stock' (name -> quantity), 'grid' (rows x columns of quantities), 'slots' (free/booked chips),
+  // 'records' (a table), 'activity'. Each points at a path in `data`.
+  backend: { name: 'Fleet', sub: 'Cars on the lot', sections: [{ type: 'stock', title: 'Available cars', path: 'stock' }, { type: 'activity' }] },
+  render(f, data = demo.data) {
     const vehicle = v(f, 'vehicle'), days = v(f, 'days');
     if (!vehicle) return { rows: [[null], [null], [null], [null]], flags: [], ok: false };   // nothing heard yet
     const flags = [];
+    const left = { Small: data.stock.Sedan, Suv: data.stock.Suv, Van: data.stock.Van }[vehicle];
+    if (left === 0) flags.push({ m: vehicle + ' fully booked. Offer a Sedan', s: 'out' });   // the voice "pings" the stockout
     if (yes(f, 'young_driver')) flags.push({ m: 'Under-25 surcharge applies', s: 'warn' });   // s: 'out' red, 'warn' amber, 'ok' green
     if (yes(f, 'one_way')) flags.push({ m: 'One-way fee: confirm the drop-off branch', s: 'warn' });
     if (!flags.length) flags.push({ m: 'No flags', s: 'ok' });
@@ -45,8 +52,10 @@ const demo = {
         [yes(f, 'one_way') ? 'One way' : 'Same place'],
       ],
       flags,
-      ok: true,                                                 // enables the confirm button
+      ok: !flags.some((x) => x.s === 'out'),                    // enables the confirm button
       toast: 'Reserved: ' + vehicle,                            // shown after confirm
+      effects: left > 0 ? [{ op: 'add', path: 'stock.' + ({ Small: 'Sedan', Suv: 'Suv', Van: 'Van' }[vehicle]), by: -1 }] : [],   // applied on confirm: add / set / put (see demos/effects.mjs)
+      note: 'Reserved ' + vehicle,                              // line in the backend activity log
       // optional panels under the card:
       //   extra: { kind: 'range', big: 'A$310 – A$420', small: ['Base A$280', 'Fee A$40'], note: 'Illustrative.' }
       //   extra: { kind: 'score', score: 72, band: 'Hot' }       (band: Hot | Warm | Cold)
@@ -59,4 +68,6 @@ const demo = {
 export default Object.assign(demo, {
   ctx: 'A customer speaking to a car rental desk.',   // one line telling Jev who is talking
   questions,
+  // Optional free text to pull out of the speech (names, companies). Shows up as fields.name etc: { value, confidence }.
+  // extract: { name: { type: 'text', instructions: "The customer's full name if they say it. Null if not." } },
 });

@@ -15,9 +15,9 @@ async function rpc(url, body, sid) {
   return { ok: r.ok, msg, sid: r.headers.get('mcp-session-id') };
 }
 
-// One typed request to Jev. Returns { model, answers, usage }. Throws Error('gateway_*') on failure.
-export async function callSystemOne(args, url = process.env.ABCDJEV_MCP_URL) {
-  const call = (id) => ({ jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'systemone', arguments: args } });
+// Call one gateway tool ('systemone' for Jev's typed answers, 'clairic_extract' for free text like names). Throws Error('gateway_*').
+export async function callTool(name, args, url = process.env.ABCDJEV_MCP_URL) {
+  const call = (id) => ({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } });
   let res = await rpc(url, call(1)).catch(() => null);
   if (!res || !res.ok || !res.msg || res.msg.error) {   // a stateful gateway would want a handshake first
     const init = await rpc(url, { jsonrpc: '2.0', id: 0, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'jev-demo', version: '1' } } });
@@ -27,6 +27,11 @@ export async function callSystemOne(args, url = process.env.ABCDJEV_MCP_URL) {
   }
   const m = res && res.msg;
   if (!m || m.error || !m.result || m.result.isError) throw new Error('gateway_call');
-  if (m.result.structuredContent && m.result.structuredContent.answers) return m.result.structuredContent;   // the gateway puts Jev's answers here
+  if (m.result.structuredContent && typeof m.result.structuredContent === 'object') return m.result.structuredContent;   // the gateway puts the answers here
   return JSON.parse((m.result.content || []).map((c) => c.text || '').join(''));
 }
+
+// One typed request to Jev. Returns { model, answers, usage }.
+export const callSystemOne = (args, url) => callTool('systemone', args, url);
+// Pull typed text values out of a transcript. fields: { name: { type: 'text', instructions } }. Returns { fields: { name: { value, confidence } } }.
+export const callExtract = (args, url) => callTool('clairic_extract', args, url);

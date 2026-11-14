@@ -13,6 +13,7 @@ const randomAnswers = (d) => {
     const opts = Object.keys(q.criteria), val = opts[Math.floor(Math.random() * opts.length)], c = Math.random();
     f[k] = { value: val, confidence: c, p: Object.fromEntries(opts.map((o) => [o, o === val ? c : (1 - c) / Math.max(1, opts.length - 1)])) };
   }
+  for (const k of Object.keys(d.extract || {})) f[k] = { value: Math.random() < 0.5 ? 'Sam Lee' : null, confidence: Math.random(), p: null };
   return f;
 };
 
@@ -35,7 +36,7 @@ for (const d of [...DEMOS, template]) {
   });
 
   test(`${d.id}: every rowKey is a real question`, () => {
-    for (const k of d.rowKeys.flatMap(keysOf)) assert.ok(d.questions[k], `rowKeys names unknown question "${k}"`);
+    for (const k of d.rowKeys.flatMap(keysOf)) assert.ok(d.questions[k] || (d.extract && d.extract[k]), `rowKeys names unknown question "${k}"`);
   });
 
   test(`${d.id}: render handles nothing heard`, () => {

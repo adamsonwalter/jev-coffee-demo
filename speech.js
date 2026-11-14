@@ -4,7 +4,7 @@
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const iosApp = isIOS && standalone;    // iPhone blocks speech recognition inside home-screen apps
+export const iosApp = isIOS && standalone;    // iPhone blocks speech recognition inside home-screen apps
 
 export const voiceProblem = () => (!SR ? 'This browser has no speech recognition. Use Safari or Chrome.' : iosApp ? 'iPhone doesn’t allow voice inside home-screen apps. Open this page in Safari to talk.' : '');
 export const idleHint = () => (!SR ? 'Voice not supported here' : iosApp ? 'Voice needs Safari' : 'Tap to talk');

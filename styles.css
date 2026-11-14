@@ -85,3 +85,72 @@ h1 span { color: var(--amber); font-style: italic; }
 
 .toast { position: fixed; left: 50%; bottom: calc(var(--sab) + 90px); transform: translate(-50%, 20px); background: var(--cream); color: #1a0c06; padding: 12px 18px; border-radius: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: .25s; max-width: 86vw; text-align: center; z-index: 50; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.modelink { align-self: center; border: 1px solid var(--line); background: transparent; color: var(--dim); border-radius: 99px; padding: 7px 16px; font: 600 13px ui-rounded, sans-serif; }
+
+/* Safari bounce: shown only inside an iPhone home-screen app, where the microphone is blocked */
+#bounce { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 32px; text-align: center; }
+#bounce[hidden], #backend[hidden] { display: none; }
+#bounce h2 { margin: 0; font: 600 26px ui-serif, "New York", Georgia, serif; color: var(--cream); }
+#bounce p { margin: 0; color: var(--ink); line-height: 1.45; max-width: 320px; }
+#bounce button { border: 0; border-radius: 16px; padding: 16px 28px; font: 700 18px ui-rounded, sans-serif; background: var(--amber); color: #1a0c06; }
+#bounce small { color: var(--dim); line-height: 1.4; max-width: 320px; }
+
+/* Backend mode: a different world on purpose (light, cool, tabular), so the switch from voice is obvious */
+body.be { background: #eef2f8; overflow: auto; }
+body.be .wrap, body.be .toast { display: none; }
+#backend { position: fixed; inset: 0; z-index: 40; overflow-y: auto; background: #eef2f8; color: #1d2636; font-family: "Avenir Next", "Helvetica Neue", sans-serif; padding: calc(var(--sat) + 12px) 16px calc(var(--sab) + 28px); -webkit-user-select: none; user-select: none; }
+#backend > * { max-width: 760px; margin-left: auto; margin-right: auto; }
+.be-top { display: flex; align-items: center; gap: 12px; padding: 4px 0 14px; }
+.be-back { border: 1px solid #c4cfe0; background: #fff; color: #31507f; border-radius: 10px; padding: 9px 12px; font: 600 14px "Avenir Next", sans-serif; }
+.be-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.be-title b { font-size: 20px; letter-spacing: -.2px; }
+.be-title span { font-size: 12px; color: #5d6b82; margin-top: 1px; }
+.be-live { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #2d7a4f; background: #e1f3e8; padding: 5px 10px; border-radius: 99px; }
+.be-live i { width: 7px; height: 7px; border-radius: 50%; background: #2fa866; animation: pulse 1.4s infinite alternate; }
+.be-card { background: #fff; border: 1px solid #d5deec; border-radius: 14px; padding: 14px 14px 12px; margin-bottom: 12px; box-shadow: 0 1px 0 #dfe7f3; }
+.be-card h3 { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #52617a; }
+.be-rows { display: flex; flex-direction: column; }
+.be-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #e6ecf5; }
+.be-row:first-child { border-top: 0; }
+.be-row .name { flex: 1; font-size: 15px; font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.dot.ok { background: #2fa866; } .dot.low { background: #e8a317; } .dot.out { background: #d9473b; }
+.step { display: flex; align-items: center; background: #f1f5fb; border: 1px solid #d5deec; border-radius: 10px; overflow: hidden; }
+.step button { border: 0; background: transparent; width: 36px; height: 34px; font: 600 20px "Avenir Next", sans-serif; color: #31507f; }
+.step button:disabled { color: #b4bfd1; }
+.step output { min-width: 40px; text-align: center; font: 700 16px ui-monospace, "SF Mono", monospace; }
+.zero { border: 1px solid #ecc4bf; background: #fdf1ef; color: #b13a2f; border-radius: 9px; padding: 7px 9px; font: 600 12px "Avenir Next", sans-serif; }
+.be-grid { display: grid; grid-template-columns: 1fr repeat(var(--cols), auto); gap: 8px 12px; align-items: center; }
+.be-grid .colh { font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #6b7a92; text-align: center; }
+.be-grid .name { font-weight: 600; font-size: 15px; }
+.be-grid .cell { display: flex; align-items: center; gap: 8px; }
+.be-slots { display: flex; flex-wrap: wrap; gap: 8px; }
+.be-group { border-top: 1px solid #e6ecf5; padding: 10px 0 4px; }
+.be-group:first-child { border-top: 0; padding-top: 0; }
+.be-group h4 { margin: 0 0 8px; font-size: 15px; }
+.be-line { display: grid; grid-template-columns: 78px 52px 1fr; align-items: start; gap: 6px; margin-bottom: 8px; }
+.be-line .who { font-size: 13px; font-weight: 600; color: #31507f; padding-top: 7px; }
+.be-line .count { font-size: 11px; color: #6b7a92; padding-top: 9px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border-radius: 8px; padding: 7px 9px; font: 600 12.5px ui-monospace, "SF Mono", monospace; border: 1px solid; background: #fff; }
+.chip.free { color: #1e7a48; border-color: #9fd6b6; background: #effaf3; }
+.chip.booked { color: #7d8aa0; border-color: #d5deec; background: #f3f6fb; text-decoration: line-through; }
+.be-scroll { overflow-x: auto; }
+.be-table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.be-table th { text-align: left; font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: #6b7a92; padding: 6px 10px 6px 0; white-space: nowrap; }
+.be-table td { padding: 9px 10px 9px 0; border-top: 1px solid #e6ecf5; white-space: nowrap; }
+.be-table td.stage { font-weight: 700; color: #31507f; }
+.be-act { display: flex; flex-direction: column; }
+.be-act .empty { margin: 0; color: #6b7a92; font-size: 13.5px; line-height: 1.4; }
+.be-actrow { display: flex; gap: 12px; padding: 8px 0; border-top: 1px solid #e6ecf5; font-size: 14px; line-height: 1.35; }
+.be-actrow:first-child { border-top: 0; }
+.be-actrow time { color: #6b7a92; font: 12px ui-monospace, "SF Mono", monospace; flex: none; padding-top: 2px; }
+.be-actrow.q b { color: #a8641a; }
+.be-actrow.q em { color: #5d6b82; font-style: normal; }
+.be-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px 0; font-size: 12px; color: #6b7a92; }
+.be-reset { border: 1px solid #c4cfe0; background: #fff; color: #52617a; border-radius: 10px; padding: 8px 12px; font: 600 12.5px "Avenir Next", sans-serif; margin-top: 8px; }
+.be-foot .be-reset { margin: 0; flex: none; }
+
+.be-live.warn { color: #9a5b12; background: #fbecd2; }
+.be-live.warn i { background: #e8a317; }

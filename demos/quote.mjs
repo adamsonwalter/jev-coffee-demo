@@ -47,12 +47,20 @@ const questions = {
 
 // ---------- QUOTE ----------
 // Illustrative rate card (AUD). Replace with the business's own rates.
-// Editable rate card (illustrative AUD): pass a different `data` to render() to change prices without touching the logic.
+// Operational data: the rate card (illustrative AUD), who is free to dispatch, and parts on the vans.
+// render() flags a trade with nobody free or a part out of stock; confirming dispatches a crew and takes the part.
 const DATA = {
   scope: { Small: [350, 1200], Medium: [1500, 5500], Large: [6500, 22000] },   // base range by job size
   tradeX: { Bathroom: 1.2, Roofing: 1.1 },                                     // trade multipliers
   fixed: { Blocked: [180, 450], Burst: [250, 800], Leak: [200, 700], Power: [150, 450], HotWater: [1200, 3500], Gas: [200, 600], Climate: [250, 1200], Lockout: [150, 350], Garage: [200, 900] },   // callouts priced by issue, not size
+  crew: {   // crews free to dispatch
+    Plumbing: { today: 1, tomorrow: 2 }, Electrical: { today: 0, tomorrow: 1 }, Gas: { today: 1, tomorrow: 1 }, Climate: { today: 0, tomorrow: 2 },
+    Carpentry: { today: 2, tomorrow: 3 }, Fencing: { today: 0, tomorrow: 1 }, Roofing: { today: 0, tomorrow: 0 }, Pest: { today: 1, tomorrow: 2 }, Locksmith: { today: 2, tomorrow: 2 },
+  },
+  parts: { 'Hot water unit 250L': 2, 'Ceiling fan kit': 0, 'Gas regulator': 6, 'Toilet suite': 4 },   // on the vans
+  activity: [],
 };
+const partFor = (issue, trade) => (issue === 'HotWater' ? 'Hot water unit 250L' : issue === 'Install' && trade === 'Electrical' ? 'Ceiling fan kit' : issue === 'Gas' ? 'Gas regulator' : null);
 const TRADE = { Plumbing: 'Plumber', Electrical: 'Sparky', Gas: 'Gas fitter', Climate: 'Fridgy / HVAC', Carpentry: 'Chippy', Bricklaying: 'Bricky', Roofing: 'Roofer', Bathroom: 'Bathroom / kitchen', Painting: 'Painter', Landscaping: 'Concreter / landscaper', Fencing: 'Fencer', Pest: 'Pestie', Locksmith: 'Locksmith', Other: 'Other' };
 const ISSUE = { Blocked: 'Blocked drain or toilet', Burst: 'Burst pipe or tap', Leak: 'Leak', Power: 'Power failure', HotWater: 'Hot water system', Gas: 'Gas leak', Climate: 'Heating or cooling down', Lockout: 'Lockout', Garage: 'Garage door', Install: 'Install or upgrade', Repair: 'Repair or maintenance', Reno: 'Renovation', Pest: 'Pest treatment', Other: 'Other' };
 const quote = {
@@ -75,6 +83,14 @@ const quote = {
   confirm: 'Send range to customer',
   maxFlags: 4,
   data: DATA,
+  backend: {
+    name: 'Dispatch board', sub: 'Crews and parts · what the office and the voice both check',
+    sections: [
+      { type: 'grid', title: 'Crews free to dispatch', path: 'crew', cols: ['today', 'tomorrow'], colLabels: ['Today', 'Tomorrow'] },
+      { type: 'stock', title: 'Parts on the vans', path: 'parts' },
+      { type: 'activity' },
+    ],
+  },
   render(f, data = quote.data) {
     const trade = v(f, 'trade'), issue = v(f, 'issue'), scope = v(f, 'scope');
     if (!trade || !scope) return { rows: [[null], [null], [null], [null], [null], [null]], flags: [], ok: false };
@@ -94,6 +110,16 @@ const quote = {
     if (yes(f, 'permit')) { adds.push(['Permit and certifier sign-off', 300, 1200]); add('Licensed sign-off or permit likely', 'warn'); }
     if (!fixed && low(f, 'scope')) add('Scope unclear: ask how many rooms and days', 'warn');
     if (issue === 'Blocked') adds.push(['If a camera or waterjet is needed', 400, 900]);
+    // Operational checks: is anyone free, and is the part in stock?
+    const crew = data.crew && data.crew[trade], label = TRADE[trade] || trade, part = partFor(issue, trade);
+    if (crew) {
+      if (urg === 'Emergency') add(crew.today > 0 ? label + ' free today (' + crew.today + ' crew)' : 'No ' + label.toLowerCase() + ' free today. ' + (crew.tomorrow > 0 ? 'Tomorrow: ' + crew.tomorrow + ' crew' : 'Nothing tomorrow either'), crew.today > 0 ? 'ok' : 'out');
+      else if (crew.today + crew.tomorrow === 0) add(label + ' fully booked. Offer next week', 'warn');
+    }
+    if (part && data.parts && part in data.parts) {
+      if (data.parts[part] <= 0) add(part + ' out of stock: 2-day lead time', 'out');
+      else if (data.parts[part] === 1) add('Last ' + part + ' on the vans', 'warn');
+    }
     flags.sort((a, b) => ({ out: 0, warn: 1, ok: 2 })[a.s] - ({ out: 0, warn: 1, ok: 2 })[b.s]);
     let tlo = lo, thi = hi; adds.forEach((a) => { if (a[0].indexOf('If a camera') !== 0) { tlo += a[1]; thi += a[2]; } });
     const fmt = (n) => 'A$' + (Math.round(n / 50) * 50).toLocaleString('en-AU');
@@ -103,6 +129,12 @@ const quote = {
       flags: flags.length ? flags : [{ m: 'No risk flags', s: 'ok' }],
       extra: { kind: 'range', big: fmt(tlo) + ' – ' + fmt(thi), small: ['Labour and base scope ' + fmt(lo) + ' – ' + fmt(hi)].concat(adds.map((a) => a[0] + ' ' + fmt(a[1]) + ' – ' + fmt(a[2]))), note: 'Illustrative rates, not a quote. Replace with your own rate card.' },
       ok: true, toast: 'Range sent: ' + fmt(tlo) + ' – ' + fmt(thi),
+      // confirming dispatches a crew (today if it's an emergency and someone is free, else tomorrow) and takes the part
+      effects: [
+        ...(crew ? (urg === 'Emergency' && crew.today > 0 ? [{ op: 'add', path: 'crew.' + trade + '.today', by: -1 }] : crew.tomorrow > 0 ? [{ op: 'add', path: 'crew.' + trade + '.tomorrow', by: -1 }] : []) : []),
+        ...(part && data.parts && data.parts[part] > 0 ? [{ op: 'add', path: 'parts.' + part, by: -1 }] : []),
+      ],
+      note: 'Quote sent: ' + label + ', ' + (ISSUE[issue] || 'job') + ' (' + fmt(tlo) + ' – ' + fmt(thi) + ')',
     };
   },
 };

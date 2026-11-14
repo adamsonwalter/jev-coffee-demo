@@ -3,14 +3,16 @@ import { DEMOS } from './demos/index.mjs';
 import { TUNING as T } from './demos/lib.mjs';
 import { post, settle, finalCheck, Stale } from './jev.js';
 import { fx } from './fx/index.js';
-import { createListener, voiceProblem, idleHint } from './speech.js';
+import { createListener, voiceProblem, idleHint, iosApp } from './speech.js';
+import * as ops from './ops.js';
+import { drawBackend } from './backend.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const sayEl = $('say'), micBtn = $('mic'), micHint = $('micHint'), risksEl = $('risks'), rowsEl = $('rows'), confirmBtn = $('confirm');
 
 // Per-conversation state. Reset by resetOutput() (tab change, Clear) and by each new mic session.
-let demo = DEMOS[0], seq = 0, ctl = null, lastFields = null, lastText = '', lastRender = null, lastChecked = '', pins = {};
+let mode = 'voice', log = [], drawn = '', demo = DEMOS[0], seq = 0, ctl = null, lastFields = null, lastText = '', lastRender = null, lastChecked = '', pins = {};
 let jevDownAt = 0, sweepTimer = null, throttleTimer = null, pendingText = '', lastFire = 0, tryTimer = null, tryIdx = 0;
 
 const jevDown = () => Date.now() - jevDownAt < T.retryMs;
@@ -26,7 +28,7 @@ function buildTabs() {
 function select(id) {
   listener.stop(); seq++; clearTimeout(throttleTimer); throttleTimer = null; ctl && ctl.abort();
   demo = DEMOS.find((d) => d.id === id) || DEMOS[0];
-  try { history.replaceState(null, '', demo.id === DEMOS[0].id ? location.pathname : '#' + demo.id); } catch (_) {}
+  syncUrl(); ops.load(demo.id);
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.id === demo.id));
   $('title').textContent = ''; $('title').append(demo.title[0] + ' ', el('span', '', demo.title.slice(1).join(' ')));
   document.title = demo.id === DEMOS[0].id ? 'Jev ' + demo.title[1] : 'Jev · ' + demo.tab;
@@ -34,6 +36,10 @@ function select(id) {
   demo.labels.forEach((l) => { const r = el('div', 'row'); r.append(el('label', '', l), el('div', 'v empty', '—')); rowsEl.appendChild(r); });
   startTry(); fx.tab(demo.id);
   resetOutput(); setEngine('', 'ready'); fx.reset();
+}
+function syncUrl() {   // #quote = that tab; #quote/backend = that tab's backend (open it on a laptop beside the phone)
+  const h = mode === 'backend' ? '#' + demo.id + '/backend' : demo.id === DEMOS[0].id ? '' : '#' + demo.id;
+  try { history.replaceState(null, '', location.pathname + h); } catch (_) {}
 }
 function startTry() {   // one rotating "Try saying" line
   clearInterval(tryTimer);
@@ -54,7 +60,7 @@ function resetOutput() {
 
 // ---------- render: demo.render(fields) -> rows, flags, panels ----------
 function render(f, settled, tags) {
-  const out = demo.render(f);
+  const out = demo.render(f, ops.data(demo.id));
   if (!out.rows.some((r) => r && r[0]) && !(out.flags || []).length) out.flags = [{ m: 'Heard you, but no order details yet. Keep talking.', s: 'warn' }];
   lastRender = out;
   let changed = false;
@@ -159,10 +165,56 @@ micBtn.addEventListener('click', () => {
 });
 
 $('clear').addEventListener('click', () => { listener.stop(); seq++; clearTimeout(throttleTimer); throttleTimer = null; ctl && ctl.abort(); resetOutput(); setEngine('', 'ready'); fx.reset(); });
-confirmBtn.addEventListener('click', () => { if (!lastRender) return; if (navigator.vibrate) navigator.vibrate(40); toast(lastRender.toast || 'Done'); $('clear').click(); });
+confirmBtn.addEventListener('click', () => {
+  if (!lastRender) return;
+  const { effects, note, toast: msg } = lastRender, id = demo.id;
+  if (navigator.vibrate) navigator.vibrate(40);
+  toast(msg || 'Done'); $('clear').click();
+  if (effects && effects.length) ops.send(id, effects, note);   // confirming updates the backend: stock down, slot booked, CRM updated
+});
+
+// ---------- backend mode: the operations console behind the voice ----------
+function setMode(m) {
+  mode = m; document.body.classList.toggle('be', m === 'backend'); $('backend').hidden = m !== 'backend';
+  if (m === 'backend') { listener.stop(); drawn = ''; refreshBackend(true); } else ops.load(demo.id);
+  syncUrl();
+}
+async function refreshBackend(force) {
+  const root = $('backend');
+  await ops.load(demo.id); log = await ops.loadLog();
+  const sig = JSON.stringify([ops.data(demo.id), log, demo.id, ops.storeKind]);
+  if (!force && sig === drawn) return;
+  drawn = sig; const y = root.scrollTop;
+  drawBackend(root, demo, ops.data(demo.id), log, {
+    send: async (effects, note) => { await ops.send(demo.id, effects, note); drawn = ''; refreshBackend(true); },
+    reset: async () => { await ops.reset(demo.id); drawn = ''; refreshBackend(true); },
+    clearLog: async () => { log = await ops.clearLog(); drawn = ''; refreshBackend(true); },
+  }, ops.storeKind);
+  root.scrollTop = y;
+}
+$('modeBtn').addEventListener('click', () => setMode('backend'));
+$('backend').addEventListener('click', (e) => { if (e.target.closest('[data-act=voice]')) setMode('voice'); });
+let tick = 0;
+setInterval(() => { if (document.hidden) return; if (mode === 'backend') refreshBackend(); else if (++tick % 3 === 0) ops.load(demo.id); }, 3000);
+
+// ---------- Safari bounce: an old home-screen install runs without Safari, where iPhone blocks the microphone ----------
+if (iosApp) {
+  $('bounce').hidden = false;
+  $('bounceBtn').addEventListener('click', () => {
+    const url = location.origin + location.pathname + location.hash;
+    window.location.href = 'x-safari-' + url;                       // asks iOS to hand the page to Safari
+    setTimeout(() => { try { window.open(url, '_blank'); } catch (_) {} }, 600);   // fallback if that scheme is ignored
+  });
+}
 
 // ---------- boot ----------
 buildTabs();
-select((location.hash || '').slice(1) || DEMOS[0].id);
+function route() {   // #quote or #quote/backend
+  const [id, sub] = (location.hash || '').slice(1).split('/'), want = DEMOS.find((d) => d.id === id) || DEMOS[0];
+  if (want.id !== demo.id || !document.querySelector('.tab.on')) select(want.id);
+  setMode(sub === 'backend' ? 'backend' : 'voice');
+}
+route();
+window.addEventListener('hashchange', route);
 micHint.textContent = idleHint();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});

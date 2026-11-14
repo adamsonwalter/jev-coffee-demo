@@ -58,8 +58,15 @@ const questions = {
 };
 
 // ---------- COFFEE (home) ----------
-// Editable tables: pass a different `data` to render() to change them without touching the logic.
-const DEFAULT_STOCK = { Oat: true, Almond: 'low', Soy: false, Skim: true, 'Full cream': true, croissant: false, cookie: false, muffin: true, extra_shot: true, syrup: true };
+// Operational data: live stock counts. render() reads them (and pings a stockout); confirming an order takes stock off.
+// The backend screen edits them, and they live in Netlify Blobs, so render(f, data) always gets the current numbers.
+const MILKS = ['Oat', 'Almond', 'Soy', 'Skim', 'Full cream'];
+const FOOD = { croissant: 'Croissant', muffin: 'Muffin', cookie: 'Cookie' };
+const DEFAULT_DATA = {
+  low: 4,   // at or under this many, a warning
+  stock: { Oat: 24, Almond: 3, Soy: 0, Skim: 12, 'Full cream': 30, Croissant: 0, Muffin: 11, Cookie: 0, 'Espresso shots': 120, 'Vanilla syrup': 8 },
+  activity: [],
+};
 const COLD_OK = ['Cold Brew'];
 const coffee = {
   id: 'coffee', tab: 'Coffee', title: ['Jev', 'Coffee'],
@@ -86,9 +93,21 @@ const coffee = {
   rowKeys: ['drink', 'size', 'milk', ['extra_hot', 'iced', 'no_ice_milk_top'], ['extra_shot', 'syrup', 'caf', 'no_foam', 'sugar_in_shot'], ['croissant', 'muffin', 'cookie']],
   confirm: 'Confirm order',
   maxFlags: 3,
-  data: { stock: DEFAULT_STOCK },
+  data: DEFAULT_DATA,
+  backend: {
+    name: 'Stockroom', sub: 'Café inventory · what the till and the voice both check',
+    sections: [
+      { type: 'stock', title: 'Milk', path: 'stock', keys: MILKS, low: 'low' },
+      { type: 'stock', title: 'Food', path: 'stock', keys: Object.values(FOOD), low: 'low' },
+      { type: 'stock', title: 'Supplies', path: 'stock', keys: ['Espresso shots', 'Vanilla syrup'], low: 'low' },
+      { type: 'activity' },
+    ],
+  },
   render(f, data = coffee.data) {
-    const stock = data.stock;
+    const stock = data.stock, lowAt = data.low;
+    const qty = (n) => Number(stock[n]) || 0;
+    const state = (n) => (qty(n) <= 0 ? 'out' : qty(n) <= lowAt ? 'low' : 'ok');
+    const alts = (list, not) => { const a = list.filter((n) => n !== not && qty(n) > 0).slice(0, 2); return a.length ? 'Offer ' + a.join(' or ') : 'No substitute in stock'; };
     const drink = f.drink && f.drink.value !== 'None' ? v(f, 'drink') : null;
     const sizeV = f.size && f.size.value !== 'Unspecified' && (f.size.confidence == null || f.size.confidence >= TUNING.guess) ? v(f, 'size') : null;
     const size = sizeV || (drink ? 'Medium' : null);
@@ -108,12 +127,18 @@ const coffee = {
 
     const flags = [];
     const add = (m, s) => flags.push({ m, s });
-    if (milk && stock[milk] === false) add(milk + ' milk out of stock', 'out');
-    if (milk && stock[milk] === 'low') add(milk + ' milk running low: oat is ready', 'warn');
-    if (yes(f, 'cookie') && !stock.cookie) add('Cookies unavailable: try a muffin', 'out');
-    if (yes(f, 'croissant') && !stock.croissant) add('Croissant unavailable: try a muffin', 'out');
-    if (yes(f, 'muffin') && !stock.muffin) add('Muffin unavailable', 'out');
-    if (yes(f, 'extra_shot') && !stock.extra_shot) add('Extra shots limited', 'warn');
+    if (milk && MILKS.includes(milk)) {
+      if (state(milk) === 'out') add(milk + ' milk is out. ' + alts(MILKS, milk), 'out');
+      else if (state(milk) === 'low') add(milk + ' milk low (' + qty(milk) + ' left). ' + alts(MILKS, milk), 'warn');
+    }
+    for (const [key, name] of Object.entries(FOOD)) {
+      if (!yes(f, key)) continue;
+      if (state(name) === 'out') add(name + ' sold out. ' + alts(Object.values(FOOD), name), 'out');
+      else if (state(name) === 'low') add('Only ' + qty(name) + ' ' + name.toLowerCase() + (qty(name) === 1 ? '' : 's') + ' left', 'warn');
+    }
+    const shotsNeeded = 1 + (yes(f, 'extra_shot') ? 1 : 0);
+    if (drink && qty('Espresso shots') < shotsNeeded) add('Out of espresso shots', 'out');
+    if (yes(f, 'syrup') && state('Vanilla syrup') === 'out') add('Vanilla syrup is out', 'out');
     if (yes(f, 'outside_blend')) add('Can’t blend outside food', 'out');
     if (sizeV === 'Trenta' && !iced && !COLD_OK.includes(drink)) add('Trenta is for cold drinks only', 'out');
     if (drink === 'Secret Menu') add('Nickname only: ask the base drink and syrups', 'warn');
@@ -133,6 +158,14 @@ const coffee = {
       rows: [[drink, low(f, 'drink')], [size, low(f, 'size') && !!sizeV], [milk === 'Split' ? 'Split milks' : milk, low(f, 'milk')], [temp], [mods.length ? mods.join(', ') : (drink ? 'None' : null)], [food.length ? food.join(', ') : (drink ? 'None' : null)]],
       flags, ok: !!drink && !flags.some((x) => x.s === 'out'),
       toast: [size, drink].filter(Boolean).join(' ') + (milk && milk !== 'None' ? ' · ' + milk : ''),
+      // what confirming takes off the shelves
+      effects: !drink ? [] : [
+        ...(MILKS.includes(milk) ? [{ op: 'add', path: 'stock.' + milk, by: -1 }] : []),
+        ...Object.entries(FOOD).filter(([k]) => yes(f, k)).map(([, n]) => ({ op: 'add', path: 'stock.' + n, by: -1 })),
+        { op: 'add', path: 'stock.Espresso shots', by: -shotsNeeded },
+        ...(yes(f, 'syrup') ? [{ op: 'add', path: 'stock.Vanilla syrup', by: -1 }] : []),
+      ],
+      note: 'Order: ' + [size, drink].filter(Boolean).join(' ') + (milk && milk !== 'None' ? ', ' + milk : ''),
     };
   },
 };

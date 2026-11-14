@@ -2,5 +2,10 @@
   "name": "jev-demo",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test" }
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^11.1.9"
+  }
 }
