@@ -9,7 +9,7 @@ export default async (req, context) => {
   if (refused) return refused;
   let body = {};
   try { body = await req.json(); } catch {}
-  const r = await run(body);
+  const r = await run(body || {});
   return json(r.body, r.status);
 };
 

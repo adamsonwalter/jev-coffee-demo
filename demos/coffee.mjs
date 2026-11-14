@@ -146,7 +146,7 @@ const coffee = {
       if (state(name) === 'out') add(name + ' sold out. ' + alts(Object.values(FOOD), name), 'out');
       else if (state(name) === 'low') add('Only ' + qty(name) + ' ' + name.toLowerCase() + (qty(name) === 1 ? '' : 's') + ' left', 'warn');
     }
-    const shotsNeeded = 1 + (yes(f, 'extra_shot') ? 1 : 0);
+    const shotsNeeded = (['Babycino', 'Drip Coffee', 'Cold Brew'].includes(drink) ? 0 : 1) + (yes(f, 'extra_shot') ? 1 : 0);   // no espresso in these
     if (drink && qty('Espresso shots') < shotsNeeded) add('Out of espresso shots', 'out');
     if (yes(f, 'syrup') && state('Vanilla syrup') === 'out') add('Vanilla syrup is out', 'out');
     if (yes(f, 'outside_blend')) add('Can’t blend outside food', 'out');
@@ -172,7 +172,7 @@ const coffee = {
       effects: !drink ? [] : [
         ...(MILKS.includes(milk) ? [{ op: 'add', path: 'stock.' + milk, by: -1 }] : []),
         ...Object.entries(FOOD).filter(([k]) => yes(f, k)).map(([, n]) => ({ op: 'add', path: 'stock.' + n, by: -1 })),
-        { op: 'add', path: 'stock.Espresso shots', by: -shotsNeeded },
+        ...(shotsNeeded ? [{ op: 'add', path: 'stock.Espresso shots', by: -shotsNeeded }] : []),
         ...(yes(f, 'syrup') ? [{ op: 'add', path: 'stock.Vanilla syrup', by: -1 }] : []),
       ],
       note: 'Order: ' + [size, drink].filter(Boolean).join(' ') + (milk && milk !== 'None' ? ', ' + milk : ''),
