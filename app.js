@@ -13,7 +13,7 @@ const sayEl = $('say'), micBtn = $('mic'), micHint = $('micHint'), risksEl = $('
 
 // Per-conversation state. Reset by resetOutput() (tab change, Clear) and by each new mic session.
 let mode = 'voice', log = [], drawn = '', hint = '', demo = DEMOS[0], seq = 0, ctl = null, lastFields = null, lastText = '', lastRender = null, lastChecked = '', pins = {};
-let jevDownAt = 0, sweepTimer = null, throttleTimer = null, pendingText = '', lastFire = 0, tryTimer = null, tryIdx = 0;
+let jevDownAt = 0, sweepTimer = null, throttleTimer = null, pendingText = '', lastFire = 0, reading = 0, tryTimer = null, tryIdx = 0;
 
 const jevDown = () => Date.now() - jevDownAt < T.retryMs;
 const fresh = () => { ctl && ctl.abort(); ctl = new AbortController(); return ctl.signal; };   // newest request wins
@@ -108,6 +108,7 @@ async function handleText(text) {
   const mySeq = ++seq;
   if (jevDown()) { setEngine('off', 'Jev offline'); say('Jev can’t be reached right now. Try again in a moment.', 'err'); return; }
   setEngine('jev busy', 'Jev…');
+  clearTimeout(sweepTimer); reading++;   // a read in progress holds the sweep back; it is rescheduled below
   const t0 = performance.now();
   try {
     const d = await post({ demo: demo.id, transcript: text }, fresh());
@@ -117,11 +118,11 @@ async function handleText(text) {
     lastFields = f; lastText = text;
     setEngine('jev', 'Jev · ' + Math.round(performance.now() - t0) + ' ms');
     render(f);
-    if (listener.listening) { clearTimeout(sweepTimer); sweepTimer = setTimeout(sweep, T.pauseMs); }
+    clearTimeout(sweepTimer); sweepTimer = setTimeout(sweep, listener.listening ? T.pauseMs : 350);
   } catch (e) {
     if (e.name === 'AbortError') return;
     jevDownAt = Date.now(); setEngine('off', 'Jev offline'); say('Jev can’t be reached right now. Try again in a moment.', 'err');
-  }
+  } finally { reading--; }
 }
 // Throttle, not debounce: while someone talks continuously, still refresh about every 0.6 s.
 function readSoon(text) {
@@ -133,7 +134,7 @@ function readSoon(text) {
 // ---------- after a pause or mic-off: settle uncertain fields, then final-check the whole card ----------
 async function sweep() {
   clearTimeout(sweepTimer);
-  if (!lastFields || !lastText || jevDown()) return;
+  if (reading || throttleTimer || !lastFields || !lastText || jevDown()) return;   // a pending read reschedules the sweep when it lands
   const mySeq = seq, text = lastText, signal = fresh();
   const call = async (body) => { const d = await post({ demo: demo.id, transcript: text, ...body }, signal); if (mySeq !== seq) throw new Stale(); return d; };
   try {
@@ -141,8 +142,9 @@ async function sweep() {
     const t0 = performance.now(), s = await settle(call, lastFields);
     if (s) { lastFields = s.merged; render(lastFields, true); setEngine('jev', 'Jev · settled ' + Math.round(performance.now() - t0) + ' ms'); }
     if (text !== lastChecked && lastRender) {
-      lastChecked = text; setEngine('jev busy', 'Final check…');
+      setEngine('jev busy', 'Final check…');
       const fc = await finalCheck(call, demo, lastRender.rows, lastFields);
+      lastChecked = text;   // only once the check has actually run
       if (!fc) { setEngine('jev', 'Jev · live'); return; }
       if (!fc.revised && !fc.doubts) { setEngine('jev', 'Jev · final check clean'); return; }
       Object.assign(pins, fc.pins); lastFields = fc.merged; render(fc.merged, true, fc.tags); fx.finalCheck();
@@ -159,7 +161,7 @@ const listener = createListener({
   onQuickEnd: () => fx.audioConflict(),
 });
 micBtn.addEventListener('click', () => {
-  if (listener.listening) { if (listener.stop()) setTimeout(sweep, 350); return; }
+  if (listener.listening) { if (listener.stop()) { clearTimeout(sweepTimer); sweepTimer = setTimeout(sweep, 350); } return; }
   const problem = voiceProblem(); if (problem) { say(problem, 'err'); return; }
   pins = {}; lastChecked = ''; fx.reset();
   if (listener.start()) fx.unlock();   // after start(), same tap
