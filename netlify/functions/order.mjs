@@ -45,46 +45,53 @@ const yn = (yes, no) => ({ type: "choice", criteria: { yes, no } });
 const ch = (criteria) => ({ type: "choice", criteria });
 
 const COFFEE = {
-  drink: {
-    type: "choice",
-    criteria: {
-      Latte: "Customer ordered a latte",
-      Cappuccino: "Customer ordered a cappuccino",
-      "Flat White": "Customer ordered a flat white",
-      Espresso: "Customer ordered an espresso or short black",
-      Americano: "Customer ordered an americano",
-      Mocha: "Customer ordered a mocha",
-      "Long Black": "Customer ordered a long black",
-      None: "No drink named yet",
-    },
-  },
-  size: {
-    type: "choice",
-    criteria: {
-      Small: "Small size",
-      Medium: "Medium or regular size",
-      Large: "Large or big size",
-      Unspecified: "No size mentioned",
-    },
-  },
-  milk: {
-    type: "choice",
-    criteria: {
-      Oat: "Oat milk",
-      Almond: "Almond milk",
-      Soy: "Soy milk",
-      Skim: "Skim or low fat milk",
-      "Full cream": "Full cream or regular dairy milk",
-      None: "No milk, or a black coffee",
-      Unspecified: "Milk not mentioned",
-    },
-  },
+  drink: ch({
+    Latte: "A latte or caffe latte",
+    Cappuccino: "A cappuccino",
+    "Flat White": "A flat white",
+    Espresso: "An espresso or short black",
+    "Long Black": "A long black",
+    Americano: "An americano",
+    Mocha: "A mocha",
+    Macchiato: "A macchiato, or an unqualified 'macchiato' (a short espresso with a dash of foam)",
+    "Long Macchiato": "A long macchiato (double espresso, dash of milk)",
+    Cortado: "A cortado or piccolo",
+    "Drip Coffee": "Drip, filter, batch brew or 'regular coffee'",
+    "Cold Brew": "Cold brew coffee",
+    Cafecito: "A cafecito or Cuban espresso",
+    "Secret Menu": "A nickname or viral secret-menu name (e.g. Butterbeer, Pinkity Drinkity) with no base drink",
+    None: "No drink named yet",
+  }),
+  size: ch({
+    Small: "Small size",
+    Medium: "Medium size",
+    Large: "Large or big size",
+    Trenta: "Trenta or the very biggest size",
+    Unspecified: "No size mentioned",
+  }),
+  milk: ch({
+    Oat: "Oat milk",
+    Almond: "Almond milk",
+    Soy: "Soy milk",
+    Skim: "Skim or low fat milk",
+    "Full cream": "Full cream or regular dairy milk",
+    Split: "Two or more milks mixed (e.g. half almond, half oat)",
+    None: "No milk, or a black coffee",
+    Unspecified: "Milk not mentioned",
+  }),
   extra_shot: yn("Customer asks for an extra, double or additional shot", "No extra shot requested"),
   croissant: yn("Customer asks for a croissant", "No croissant requested"),
   muffin: yn("Customer asks for a muffin", "No muffin requested"),
   syrup: yn("Customer asks for a syrup such as vanilla or caramel", "No syrup requested"),
+  caf: ch({ Normal: "Normal caffeine", Half: "Half-caf or half-strength", Decaf: "Decaf" }),
+  extra_hot: yn("Customer asks for extra hot or very hot", "No extra-hot request"),
+  iced: yn("The drink is iced, over ice, or cold", "The drink is hot"),
+  no_foam: yn("Customer asks for no foam, or flat milk", "No foam request"),
+  no_ice_milk_top: yn("Iced drink with no ice and milk filled to the top", "No such request"),
+  regular_word: yn("Customer says 'regular' for the coffee without saying what they mean", "Does not use the word regular"),
+  outside_blend: yn("Customer asks to blend a cake, brownie or other outside food into the drink", "No blending request"),
+  sugar_in_shot: yn("Customer wants sugar brewed or whipped into the espresso", "No sugar-in-shot request"),
 };
-
 
 const QUOTE = {
   trade: ch({ Plumbing: "Plumbing, drains, hot water, taps", Electrical: "Electrical, wiring, switchboard, lighting", Painting: "Painting or plastering", Bathroom: "Bathroom, kitchen or tiling renovation", Roofing: "Roof, gutters, leaks from above", Carpentry: "Carpentry, decking, framing, doors", Landscaping: "Landscaping, fencing, concreting", Other: "Anything else or unclear" }),

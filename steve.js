@@ -1,7 +1,7 @@
-// Steve the dachshund (silent on purpose: playing audio on iPhone takes over the mic channel and kills speech recognition). Say "dachshund" or "sausage dog" in any demo and he trots through, barks twice, and leaves.
+// Steve the dachshund (barks via audio.js). Say "dachshund" or "sausage dog" in any demo and he trots through, barks twice, and leaves.
 // Any page that loads this file and calls Steve.check(text) gets him. Total screen time ~2.9s.
 (function () {
-  const TRIGGER = /\b(dachshunds?|sausage[ -]?dogs?|wiener[ -]?dogs?|weiner[ -]?dogs?|doxie)\b/i;
+  const TRIGGER = /\b(dach?s?[ -]?h[uo]nds?|dacks?[ -]?h[uo]nds?|dash[ -]?(?:hound|hund|hunt|und)s?|dax[ -]?hunds?|sausage[ -]?dogs?|wiener[ -]?dogs?|weiner[ -]?dogs?|doxie)\b/i;
   const COOLDOWN = 7000;
   let last = 0, seen = 0;
   const TRIGGER_G = new RegExp(TRIGGER.source, 'gi');
@@ -70,8 +70,8 @@
     n.className = ''; void n.offsetWidth; n.classList.add('go');
     const open = (ms) => setTimeout(() => { n.classList.add('open', 'bark'); setTimeout(() => n.classList.remove('open', 'bark'), 190); }, ms);
     setTimeout(() => n.classList.add('still'), 810);
-    open(860);
-    open(1400);
+    open(860); setTimeout(() => window.JevAudio && JevAudio.bark(), 860);
+    open(1400); setTimeout(() => window.JevAudio && JevAudio.bark(), 1400);
     setTimeout(() => n.classList.remove('still'), 2150);
     setTimeout(() => { n.className = ''; }, 3000);
     if (navigator.vibrate) navigator.vibrate([30, 80, 30]);

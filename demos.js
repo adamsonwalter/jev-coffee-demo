@@ -8,28 +8,62 @@
 
   // ---------- COFFEE (home) ----------
   const stock = { Oat: true, Almond: true, Soy: false, Skim: true, 'Full cream': true, croissant: false, muffin: true, extra_shot: true, syrup: true };
+  const COLD_OK = ['Cold Brew'];
   const coffee = {
     id: 'coffee', tab: 'Coffee', title: ['Jev', 'Coffee'],
     say: 'Tap the mic and say your order',
-    placeholder: 'Or type here, or use your keyboard’s mic',
-    chips: ['Large oat latte, extra shot, croissant', 'Flat white no milk', 'Medium cappuccino almond milk', 'Small soy mocha and a muffin'],
+    // Unusual orders rotate one at a time under the mic so the fields keep the screen.
+    chips: [
+      'A flat white please',
+      'A no-foam cappuccino, half almond half oat, extra hot',
+      'Just a macchiato',
+      'Iced latte with no ice and milk to the top',
+      'A regular coffee',
+      'A trenta hot latte',
+      'A cafecito with the sugar brewed in',
+      'A Pinkity Drinkity',
+      'Blend my brownie into a frappe',
+      'A long macchiato with a sausage dog please',
+    ],
     labels: ['Drink', 'Size', 'Milk', 'Extras'],
     confirm: 'Confirm order',
+    maxFlags: 3,
     render(f) {
       const drink = f.drink && f.drink.value !== 'None' ? v(f, 'drink') : null;
-      const size = f.size && f.size.value !== 'Unspecified' ? v(f, 'size') : (drink ? 'Medium' : null);
+      const sizeV = f.size && f.size.value !== 'Unspecified' && (f.size.confidence == null || f.size.confidence >= 0.6) ? v(f, 'size') : null;
+      const size = sizeV || (drink ? 'Medium' : null);
       const milk = f.milk && f.milk.value !== 'Unspecified' ? v(f, 'milk') : null;
+      const iced = yes(f, 'iced') && (f.iced.confidence == null || f.iced.confidence >= 0.6);
+      const mods = [];
       const labels = { extra_shot: 'Extra shot', croissant: 'Croissant', muffin: 'Muffin', syrup: 'Vanilla syrup' };
-      const ex = Object.keys(labels).filter((k) => yes(f, k));
+      Object.keys(labels).forEach((k) => yes(f, k) && mods.push(labels[k]));
+      if (v(f, 'caf') === 'Half') mods.push('Half-caf'); if (v(f, 'caf') === 'Decaf') mods.push('Decaf');
+      if (yes(f, 'extra_hot')) mods.push('Extra hot');
+      if (iced) mods.push(yes(f, 'no_ice_milk_top') ? 'No ice' : 'Iced');
+      if (yes(f, 'no_foam')) mods.push('No foam');
+      if (yes(f, 'sugar_in_shot')) mods.push('Sugar in shot');
+
       const flags = [];
-      if (milk && stock[milk] === false) flags.push({ m: milk + ' milk out of stock', s: 'out' });
-      if (yes(f, 'croissant') && !stock.croissant) flags.push({ m: 'Croissant unavailable — try a muffin', s: 'out' });
-      if (yes(f, 'muffin') && !stock.muffin) flags.push({ m: 'Muffin unavailable', s: 'out' });
-      if (yes(f, 'extra_shot') && !stock.extra_shot) flags.push({ m: 'Extra shots limited', s: 'warn' });
-      if (drink && !milk && !['Espresso', 'Long Black', 'Americano'].includes(drink)) flags.push({ m: 'Milk not heard — ask customer', s: 'warn' });
-      if (drink && !flags.length) flags.push({ m: 'No stock issues', s: 'ok' });
+      const add = (m, s) => flags.push({ m, s });
+      if (milk && stock[milk] === false) add(milk + ' milk out of stock', 'out');
+      if (yes(f, 'croissant') && !stock.croissant) add('Croissant unavailable: try a muffin', 'out');
+      if (yes(f, 'muffin') && !stock.muffin) add('Muffin unavailable', 'out');
+      if (yes(f, 'extra_shot') && !stock.extra_shot) add('Extra shots limited', 'warn');
+      if (yes(f, 'outside_blend')) add('Can’t blend outside food', 'out');
+      if (sizeV === 'Trenta' && !iced && !COLD_OK.includes(drink)) add('Trenta is for cold drinks only', 'out');
+      if (drink === 'Secret Menu') add('Nickname only: ask the base drink and syrups', 'warn');
+      if (yes(f, 'no_foam') && drink === 'Cappuccino') add('No-foam cappuccino is a latte: confirm', 'warn');
+      if (drink === 'Macchiato') add('Macchiato: short espresso with foam, or a sweet caramel one?', 'warn');
+      if (v(f, 'milk') === 'Split') add('Split milks: confirm the ratio', 'warn');
+      if (iced && yes(f, 'extra_hot')) add('Extra hot on a cold drink: clarify', 'warn');
+      if (yes(f, 'no_ice_milk_top')) add('No ice, milk to the top: latte or just a splash?', 'warn');
+      if (yes(f, 'regular_word')) add('“Regular” is unclear: ask size and milk', 'warn');
+      if (drink === 'Cafecito' || yes(f, 'sugar_in_shot')) add('Cafecito: whip sugar into the first drops, not the puck', 'warn');
+      if (drink && !milk && !['Espresso', 'Long Black', 'Americano', 'Cafecito', 'Cold Brew', 'Drip Coffee', 'Secret Menu'].includes(drink)) add('Milk not heard: ask customer', 'warn');
+      if (drink && !flags.length) add('No stock issues', 'ok');
+      flags.sort((x, y) => ({ out: 0, warn: 1, ok: 2 })[x.s] - ({ out: 0, warn: 1, ok: 2 })[y.s]);
       return {
-        rows: [[drink, low(f, 'drink')], [size, low(f, 'size')], [milk, low(f, 'milk')], [ex.length ? ex.map((k) => labels[k]).join(', ') : (drink ? 'None' : null)]],
+        rows: [[drink, low(f, 'drink')], [size, low(f, 'size') && !!sizeV], [milk === 'Split' ? 'Split milks' : milk, low(f, 'milk')], [mods.length ? mods.join(', ') : (drink ? 'None' : null)]],
         flags, ok: !!drink && !flags.some((x) => x.s === 'out'),
         toast: [size, drink].filter(Boolean).join(' ') + (milk && milk !== 'None' ? ' · ' + milk : ''),
       };
