@@ -3,6 +3,8 @@
 
 // Jev is reached through the ABCDJEV gateway (MCP over HTTP). The gateway holds the Jev key;
 // the secret gateway URL lives only in the Netlify env var ABCDJEV_MCP_URL.
+import { DEMOS } from "../../demos/index.mjs";
+
 const GATEWAY = process.env.ABCDJEV_MCP_URL;
 const MODEL = process.env.JEV_MODEL || "jev-latest";
 const H = { "content-type": "application/json", accept: "application/json, text/event-stream" };
@@ -42,129 +44,8 @@ async function callSystemOne(args) {
   return JSON.parse(txt);
 }
 
-const yn = (yes, no) => ({ type: "choice", criteria: { yes, no } });
-const ch = (criteria) => ({ type: "choice", criteria });
-
-const COFFEE = {
-  drink: ch({
-    Latte: "A latte or caffe latte",
-    Cappuccino: "A cappuccino",
-    "Flat White": "A flat white",
-    Espresso: "An espresso or short black",
-    "Long Black": "A long black",
-    Americano: "An americano",
-    Mocha: "A mocha",
-    Macchiato: "A macchiato, or an unqualified 'macchiato' (a short espresso with a dash of foam)",
-    "Long Macchiato": "A long macchiato (double espresso, dash of milk)",
-    Cortado: "A cortado",
-    Piccolo: "A piccolo or piccolo latte (a single ristretto with steamed milk in a small glass)",
-    Magic: "A magic (a double ristretto with steamed milk in a small cup, a Melbourne order)",
-    "Long Mac Topped Up": "A long mac topped up (a long macchiato topped up with steamed milk)",
-    Babycino: "A babycino (frothy milk for a child, no coffee)",
-    "Drip Coffee": "Drip, filter, batch brew or 'regular coffee'",
-    "Cold Brew": "Cold brew coffee",
-    Cafecito: "A cafecito or Cuban espresso",
-    "Secret Menu": "A nickname or viral secret-menu name (e.g. Butterbeer, Pinkity Drinkity) with no base drink",
-    None: "No drink named yet",
-  }),
-  size: ch({
-    Small: "Small size",
-    Medium: "Medium size",
-    Large: "Large or big size",
-    Trenta: "Trenta or the very biggest size",
-    Unspecified: "No size mentioned",
-  }),
-  milk: ch({
-    Oat: "Oat milk",
-    Almond: "Almond milk",
-    Soy: "Soy milk",
-    Skim: "Skim or low fat milk",
-    "Full cream": "Full cream or regular dairy milk",
-    Split: "Two or more milks mixed (e.g. half almond, half oat)",
-    None: "No milk, or a black coffee",
-    Unspecified: "Milk not mentioned",
-  }),
-  extra_shot: yn("Customer asks for an extra, double or additional shot", "No extra shot requested"),
-  croissant: yn("Customer asks for a croissant", "No croissant requested"),
-  muffin: yn("Customer asks for a muffin", "No muffin requested"),
-  cookie: yn("Customer asks for a cookie or biscuit", "No cookie requested"),
-  syrup: yn("Customer asks for a syrup such as vanilla or caramel", "No syrup requested"),
-  caf: ch({ Normal: "Normal caffeine", Half: "Half-caf or half-strength", Decaf: "Decaf" }),
-  extra_hot: yn("Customer asks for extra hot or very hot", "No extra-hot request"),
-  iced: yn("The drink is iced, over ice, or cold", "The drink is hot"),
-  no_foam: yn("Customer asks for no foam, or flat milk", "No foam request"),
-  no_ice_milk_top: yn("Iced drink with no ice and milk filled to the top", "No such request"),
-  regular_word: yn("Customer says 'regular' for the coffee without saying what they mean", "Does not use the word regular"),
-  outside_blend: yn("Customer asks to blend a cake, brownie or other outside food into the drink", "No blending request"),
-  sugar_in_shot: yn("Customer wants sugar brewed or whipped into the espresso", "No sugar-in-shot request"),
-};
-
-const QUOTE = {
-  trade: ch({
-    Plumbing: "Plumbing: plumber, drains, taps, toilets, dunny diver, drain surgeon",
-    Electrical: "Electrical: electrician, sparky, wiring, switchboard, lights, power points, EV charger, solar",
-    Gas: "Gas fitting: gas appliances, gas lines, gas leaks",
-    Climate: "Heating, cooling and refrigeration: fridgy, air conditioning, ducted heating",
-    Carpentry: "Carpentry: chippy, carpenter, joiner, decks, doors, timber, cabinetry",
-    Bricklaying: "Bricklaying or masonry: bricky",
-    Roofing: "Roofing: roofer, tiles, flashing, gutters",
-    Bathroom: "Bathroom, kitchen or tiling renovation: tiler",
-    Painting: "Painting or plastering",
-    Landscaping: "Landscaping, concreting, paving or fencing: concreter, landscaper",
-    Pest: "Pest control: pestie, termites, rodents, spiders, ants",
-    Locksmith: "Locksmith or garage doors",
-    Other: "Anything else or unclear",
-  }),
-  issue: ch({
-    Blocked: "Blocked pipe, toilet or drain",
-    Burst: "Burst pipe, burst tap or showerhead",
-    Leak: "Internal leak, leaking tank or leaking roof",
-    Power: "Power failure, tripping safety switch or blown fuse",
-    HotWater: "Hot water system failed or leaking",
-    Gas: "Gas leak or smell of gas",
-    Climate: "Heating or cooling breakdown",
-    Lockout: "Locked out, or a lock is broken",
-    Garage: "Garage door broken",
-    Install: "Planned install or upgrade: fan, lights, switchboard, solar, EV charger, appliance hookup, tapware",
-    Repair: "General repair or maintenance: deck, door, plasterboard, gutters, tiles, fence, paving",
-    Reno: "Renovation or rebuild",
-    Pest: "Pest treatment or inspection",
-    Other: "Anything else or unclear",
-  }),
-  scope: ch({ Small: "Under one day of work", Medium: "Between two and five days of work", Large: "A week or more of work, or a full renovation" }),
-  access: ch({ Easy: "Easy access, empty site, any hours", Restricted: "Restricted access: strata, limited hours, tight space, occupied home, weekends only", Unknown: "Access not mentioned" }),
-  old_building: yn("Building is old (pre-1990), or fibro, asbestos, old wiring or lead paint is mentioned", "No sign of an old building"),
-  hidden_risk: yn("Leak, damp, rot, termites, cracks or unknown conditions behind walls or under floors are mentioned", "No hidden-damage signals"),
-  permit: yn("Work likely needs a permit, certifier or licensed sign-off (structural, gas, electrical, plumbing, removing walls)", "Unlikely to need a permit"),
-  materials: ch({ Customer: "Customer supplies materials", Contractor: "Contractor supplies materials", Unspecified: "Not mentioned" }),
-  urgency: ch({ Emergency: "Emergency: active leak, no power, gas smell, blocked toilet, unsafe, needs attention today", Soon: "Wanted within the next week or two", Flexible: "Flexible timing" }),
-};
-
-const DESK = {
-  reason: ch({ Checkup: "Routine check-up or review", Injury: "New injury, pain or illness", Followup: "Follow-up on an existing issue", Repeat: "Repeat prescription or referral", Results: "Test results", Other: "Anything else or unclear" }),
-  urgency: ch({ Routine: "Routine, can wait a week or more", Soon: "Should be seen within a few days", Urgent: "Needs to be seen today" }),
-  red_flag: yn("Mentions chest pain, trouble breathing, stroke signs, severe bleeding, fainting, severe allergic reaction, or thoughts of self-harm", "No emergency symptoms mentioned"),
-  patient: ch({ New: "New patient, first visit", Existing: "Existing patient", Unspecified: "Not mentioned" }),
-  day: ch({ Today: "Today", Tomorrow: "Tomorrow", ThisWeek: "Later this week", NextWeek: "Next week or later", Unspecified: "No day mentioned" }),
-  time: ch({ Morning: "Morning", Afternoon: "Afternoon", Evening: "After work or evening", Unspecified: "No time preference" }),
-};
-
-const SALES = {
-  interest: ch({ Hot: "Buyer is keen and engaged, asking about next steps or price", Warm: "Interested but not committed", Cold: "Little interest or polite brush-off" }),
-  budget: ch({ Confirmed: "Budget confirmed or approved", Quoted: "A price was quoted and the buyer has not yet agreed to it", Vague: "Budget discussed only vaguely", TooHigh: "Buyer says it is too expensive", NotDiscussed: "Budget not discussed" }),
-  timeline: ch({ Now: "Wants to move this month", Quarter: "Within about three months", Later: "Later, no date, or just exploring" }),
-  decision_maker: ch({ Yes: "Spoke with the decision maker", No: "Needs sign-off from someone else", Unknown: "Not clear who decides" }),
-  competitor: yn("A competitor or alternative is mentioned", "No competitor mentioned"),
-  stall: yn("Buyer hesitates, delays, goes quiet, or says they will think about it", "No stalling signals"),
-  next_step: ch({ Proposal: "Send a proposal or quote", Payment: "Send an invoice or payment link", Demo: "Book a demo or meeting", Call: "Follow-up call", None: "No next step agreed" }),
-};
-
-const SETS = {
-  coffee: { q: COFFEE, ctx: "Customer speaking a coffee order at a cafe counter." },
-  quote: { q: QUOTE, ctx: "A tradesperson dictating a job description for a quote. Judge only what is said." },
-  desk: { q: DESK, ctx: "A patient speaking to a clinic receptionist to book an appointment." },
-  sales: { q: SALES, ctx: "A salesperson dictating notes after a customer call." },
-};
+// Every demo (questions, context) comes from demos/*.mjs. Adding a demo there adds it here, with no change to this file.
+const SETS = Object.fromEntries(DEMOS.map((d) => [d.id, { q: d.questions, ctx: d.ctx }]));
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {

@@ -1,6 +1,6 @@
 // App-shell cache so the home-screen app opens instantly. /api is never cached.
-const V = "jev-coffee-v6";
-const SHELL = ["/", "/demos.js", "/steve.js", "/audio.js", "/censor.js", "/manifest.webmanifest", "/icons/apple-touch-icon.png", "/icons/icon-192.png"];
+const V = "jev-coffee-v7";
+const SHELL = ["/", "/demos/index.mjs", "/demos/lib.mjs", "/demos/coffee.mjs", "/demos/quote.mjs", "/demos/desk.mjs", "/demos/sales.mjs", "/steve.js", "/audio.js", "/censor.js", "/manifest.webmanifest", "/icons/apple-touch-icon.png", "/icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(V).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

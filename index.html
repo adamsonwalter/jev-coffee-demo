@@ -137,11 +137,11 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="/demos.js"></script>
 <script src="/audio.js"></script>
 <script src="/steve.js"></script>
 <script src="/censor.js"></script>
-<script>
+<script type="module">
+import { DEMOS } from '/demos/index.mjs';
 const $ = (id) => document.getElementById(id);
 const sayEl = $('say'), micBtn = $('mic'), micHint = $('micHint'), risksEl = $('risks'), rowsEl = $('rows');
 const confirmBtn = $('confirm'), engineEl = $('engine'), engineTxt = $('engineTxt');
