@@ -297,7 +297,7 @@ async function sweep() {
 }
 function handleTextDebounced(text) { clearTimeout(debounce); debounce = setTimeout(() => handleText(text), 250); }
 function heard(text) { if (window.Steve) Steve.check(text); if (window.Censor) Censor.check(text); }
-function resetFx() { resetFx(); if (window.Censor) Censor.reset(); }
+function resetFx() { if (window.Steve) Steve.reset(); if (window.Censor) Censor.reset(); }
 
 // ---------- speech (Safari / Chrome) ----------
 // Continuous listening where it works; falls back to phrase-by-phrase if the browser hears nothing.
