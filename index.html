@@ -74,8 +74,12 @@
 
   .say { text-align: center; min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 0 6px; font: italic 18px/1.35 ui-serif, Georgia, serif; color: var(--amber-soft); }
   .say.idle { color: var(--dim); font-size: 16px; }
+  .say.heard { flex-direction: column; gap: 2px; font-size: 17px; }
+  .say.heard::before { content: 'Heard'; font: 600 11px ui-rounded, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: var(--amber-soft); font-style: normal; }
   .say.err { color: var(--out); font-style: normal; font-size: 15px; font-family: ui-rounded, sans-serif; }
 
+  .under { text-align: center; font-size: 13px; line-height: 1.4; color: var(--dim); min-height: 0; padding: 0 8px; }
+  .under b { color: var(--amber-soft); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 11px; margin-right: 6px; }
   .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
   #mic { position: relative; width: 76px; height: 76px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: radial-gradient(circle at 35% 28%, #ffd88a, var(--amber) 55%, #d98615); box-shadow: 0 10px 30px rgba(255,176,64,.3), inset 0 -4px 10px rgba(120,60,0,.35); display: grid; place-items: center; touch-action: manipulation; transition: transform .12s; }
   #mic:active { transform: scale(.94); }
@@ -115,6 +119,7 @@
   </section>
 
   <div class="say idle" id="say"></div>
+  <div class="under" id="under"></div>
 
   <div class="mic-wrap">
     <button id="mic" aria-label="Start or stop listening">
@@ -180,7 +185,7 @@ function startTry() {
 }
 function resetOutput() {
   lastFields = null; lastText = ''; clearTimeout(sweepTimer);
-  rowsEl.querySelectorAll('.v').forEach((n) => { n.className = 'v empty'; n.textContent = '—'; });
+  rowsEl.querySelectorAll('.v').forEach((n) => { n.className = 'v empty'; n.textContent = '—'; }); $('under').innerHTML = '';
   risksEl.innerHTML = ''; $('banner').innerHTML = ''; $('extra').innerHTML = '';
   confirmBtn.disabled = true; confirmBtn.className = ''; confirmBtn.textContent = demo.confirm; lastRender = null;
   say(demo.say, 'idle');
@@ -234,6 +239,9 @@ function render(f, settle) {
     const old = n.querySelector('small'); if (old) old.remove();
     if (val && lowConf) { const s = document.createElement('small'); s.textContent = 'not sure — check'; n.appendChild(s); }
   });
+  const und = $('under'); und.innerHTML = '';
+  const said = out.rows.filter((r) => r && r[0] && r[0] !== 'None').map((r) => r[0]);
+  if (said.length) { und.innerHTML = '<b>Understood</b><span></span>'; und.lastChild.textContent = said.join(' · '); }
   if (changed && window.JevAudio) JevAudio.pip();
   const b = $('banner'); b.innerHTML = '';
   if (out.banner) { const d = document.createElement('div'); d.className = 'banner'; d.innerHTML = '<b></b><span></span>'; d.firstChild.textContent = out.banner.title; d.lastChild.textContent = out.banner.body; b.appendChild(d); }
@@ -306,7 +314,7 @@ function newSession() {
     const full = (prefix + ' ' + sess).replace(/\s+/g, ' ').trim();
     lastFull = full;
     if (fin > finals) { finals = fin; if (window.JevAudio) JevAudio.pip(); }
-    if (full) { say('“' + full + '”'); heard(full); handleTextDebounced(full); }
+    if (full) { say('“' + full + '”', 'heard'); heard(full); handleTextDebounced(full); }
   };
   rec.onerror = (e) => {
     const m = { 'not-allowed': 'Microphone blocked. iPhone: Settings › Safari › Microphone → Allow, and turn on Settings › Siri › Dictation.', 'service-not-allowed': 'Dictation is off. Turn on Settings › General › Keyboard › Enable Dictation.', 'audio-capture': 'No microphone found.', 'network': 'Speech service unreachable. Check your connection.' }[e.error];
