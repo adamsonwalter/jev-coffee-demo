@@ -22,7 +22,12 @@
 
   <header>
     <h1 id="title">Jev <span>Coffee</span></h1>
-    <div class="engine" id="engine"><i></i><span id="engineTxt">ready</span></div>
+    <div class="hright">
+      <div class="engine" id="engine"><i></i><span id="engineTxt">ready</span></div>
+      <a class="iconbtn" id="storiesBtn" href="#stories" aria-label="What is this for? Stories for your trade">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8 9h8M8 12h5"/></svg>
+      </a>
+    </div>
   </header>
 
   <section class="ticket" aria-live="polite">
@@ -44,7 +49,7 @@
   </div>
 
   <div class="try" id="try"></div>
-  <button class="modelink" id="modeBtn">Backend ›</button>
+  <div class="linkrow"><button class="modelink" id="modeBtn">Backend ›</button><span class="ver" id="ver"></span></div>
 
   <div class="actions">
     <button id="clear">Clear</button>
@@ -53,6 +58,7 @@
 </div>
 <div class="toast" id="toast"></div>
 <main id="backend" hidden></main>
+<div id="stories" hidden></div>
 <div id="player" hidden>
   <button id="playerClose" aria-label="Close video">×</button>
   <video id="playerVideo" controls playsinline preload="none"></video>
