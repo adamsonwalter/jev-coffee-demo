@@ -6,15 +6,16 @@ Tabs: Coffee (home), Quote (trades), Front desk (clinic booking), Sales (post-ca
 | | |
 |---|---|
 | `demos/` | **One file per demo**: Jev's questions, the screen, the maths, its operational `data`, its `backend` sections, and the `effects` confirming applies. `index.mjs` lists them. `lib.mjs` has helpers and every threshold (`TUNING`). `effects.mjs` is the only way data changes. |
-| `app.js` `styles.css` `index.html` | The screen: tabs, rows, flags, wiring, Backend mode. |
+| `app.js` `styles.css` `index.html` `dom.js` | The screen: tabs, rows, flags, wiring, Backend mode. `dom.js` is the one element helper. |
 | `backend.js` `ops.js` | The Backend console, built from each demo's `backend`; the browser's copy of the data. |
-| `speech.js` `jev.js` | Speech recognition; the Jev client with the settling pass and the final check (no DOM, tested in Node). |
+| `speech.js` `conversation.js` `jev.js` | Speech recognition. `conversation.js` decides when Jev is asked: one read in flight at a time, newest words win, then the second look after a pause. `jev.js` is the Jev client with the settling pass and the final check. The last two have no DOM and are tested in Node. |
 | `stories.mjs` `stories.js` | **"What it's for"**: the speech-bubble icon in the header opens stories for a café owner, plumber/roofer, dentist, pool builder, sales manager and grower. `#stories/dentist` links to one person. Stories marked "works in the demo" are rendered through the real demo by `tests/stories.test.mjs`, so the page cannot drift from the app. |
-| `version.json` `version.js` | **The one place the version lives.** Pages and the service worker read `/version.json` at run time (served `no-store`), so nothing else contains it. To release: edit `version.json`, nothing else. Shown on the resting line, beside Backend, on the stories page and on the Safari prompt. |
+| `version.json` `version.js` | **The one place the version lives.** Pages read `/version.json` at run time (served `no-store`), so nothing else contains it. To release: edit `version.json`, nothing else. Shown on the resting line, beside Backend, on the stories page and on the Safari prompt. |
 | `fx/` | Effects: pip, Steve the dachshund, censor bleep. `fx/index.js` is the only door. |
 | `server/` | `modes.mjs` read / audit / rewrite (+ name extraction); `gateway.mjs` talks to Jev; `ops.mjs` data and quality log; `guard.mjs` origin + rate limits; `store.mjs` Netlify Blobs (memory fallback). |
 | `netlify/functions/` | `order.mjs` = `POST /api/order` (Jev). `ops.mjs` = `/api/data` and `/api/log`. |
-| `tests/` | `npm test`, no extra dependencies. Checks every demo, the server, the effects engine and the final check. |
+| `tests/` | `npm test`, no extra dependencies. Checks every demo, the server, the effects engine, the conversation timing and the final check. |
+| `sw.js` | Retired service worker: a stub that removes the old one from phones that still have it. The app needs the network to do anything, so nothing is cached. |
 
 ## Add a demo (about 10 minutes)
 1. Copy `demos/_template.mjs` to `demos/<name>.mjs`; edit questions, labels, rows, flags, data, backend.
@@ -28,9 +29,11 @@ Each demo's Backend has a **Scenarios** card: one tap sets up a pitch situation 
 Each flag in a demo's `render` can carry `say`: one plain-speech sentence (72 characters or fewer, enforced by `tests/say.test.mjs`) such as `We’re nearly out of oat milk. How about almond or skim?`. `pickSay` in `demos/lib.mjs` takes the most serious one, and the screen shows it in the "Try saying" slot, so it takes no extra space; with nothing to say, the examples come back. Stories marked "works in the demo" are checked against these sentences.
 
 ## How a conversation flows
-words -> live read about every 0.6 s (Jev for choices, extraction for names) -> render reads the backend data and pings stockouts or no availability -> after a pause or mic-off: **settle** unsure fields -> **final check** (Jev audits each row; clear mismatches are rewritten, tagged, chimed, and logged) -> **confirm** applies the demo's effects to the backend.
+words -> live read about every 0.6 s, never two at once (Jev for choices, extraction for names) -> render reads the backend data and pings stockouts or no availability -> after a pause or mic-off: **settle** unsure fields -> **final check** (Jev audits each row; clear mismatches are rewritten, tagged, chimed, and logged) -> **confirm** applies the demo's effects to the backend.
 
 ## Setup on Netlify
 - `ABCDJEV_MCP_URL` (environment variable, mark it secret): the ABCDJEV gateway URL. Functions read it at run time.
 - Netlify Blobs needs nothing enabled. Optional tuning: `JEV_PER_MIN` (default 150 Jev calls per visitor per minute), `JEV_DAILY_LIMIT` (default 30000 per day, all visitors).
+- Limits are approximate: per-minute counts are kept in memory per function instance, the daily count is written to storage every 20 calls.
+- Jev is sent the last 900 characters of a conversation (about a minute of speech).
 - Stored: `demo-data` (each demo's data), `quality-log` (final-check mismatches: includes short snippets of what was said; clear it from the Backend screen), `limits` (counters).

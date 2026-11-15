@@ -3,9 +3,9 @@
 import { PERSONAS, LEGEND, BADGE, LEDE } from './stories.mjs';
 import { stamp } from './version.js';
 import { DEMOS } from './demos/index.mjs';
+import { el } from './dom.js';
 
 const FOOTER = '© 2026 Walter Adamson | BHP 20 years, Head IT Audit - IT Strategy - Corporate Planning - International Bus Development | 100+ AI workflow solutions delivered | linkedin.com/in/adamson | walter@outcomesnow.com';
-const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const tabName = (id) => (DEMOS.find((d) => d.id === id) || {}).tab || id;
 
 // root: the #stories element. personaId: which friend's stories to show. on: { pick(id), close(), tryIt(tab, t) }

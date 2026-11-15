@@ -15,6 +15,8 @@ const FINAL = ' This is the complete final transcript of everything said. Consid
 
 class Bad extends Error { constructor(code, status = 400) { super(code); this.status = status; } }
 const clip = (s, n) => String(s == null ? '' : s).slice(0, n);
+// The last n characters, starting on a whole word: in a long conversation the latest words matter most.
+const tail = (s, n) => { const t = String(s == null ? '' : s).trim(); return t.length <= n ? t : t.slice(-n).replace(/^\S*\s+/, ''); };
 const fieldOf = (a = {}) => ({ value: a.choice, confidence: a.confidence ?? null, p: a.probabilities || null });
 const pick = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => keys.includes(k)));
 
@@ -82,7 +84,7 @@ const MODES = {
 // body -> { status, body }. Jev, extraction and the log are injectable so tests run without any of them.
 export async function run(body = {}, { call = callSystemOne, extract = callExtract, log = logEvent } = {}) {
   const safeLog = (ev) => Promise.resolve(log(ev)).catch(() => {});   // logging must never break a request
-  const demo = clip(body.demo || 'coffee', 20), mode = clip(body.mode || 'read', 10), transcript = clip(body.transcript, 900).trim();
+  const demo = clip(body.demo || 'coffee', 20), mode = clip(body.mode || 'read', 10), transcript = tail(body.transcript, 900);
   const set = SETS[demo];
   try {
     if (!set) throw new Bad('unknown_demo');

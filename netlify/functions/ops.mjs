@@ -1,5 +1,5 @@
 // The "backend" of the demos: operational data (stock, calendars, CRM) and the quality log, kept in Netlify Blobs.
-//   GET  /api/data?demo=coffee                    -> { data, store }   store: 'blobs' (real) or 'memory' (fallback)
+//   GET  /api/data?demo=coffee[&log=1]            -> { data, store, log? }   store: 'blobs' (real) or 'memory' (fallback)
 //   POST /api/data { demo, effects, note }        -> { data }      apply effects (see demos/effects.mjs)
 //   POST /api/data { demo, reset: true }          -> { data }      back to the starting data
 //   POST /api/data { demo, scenario: 'rush' }     -> { data, say } a pitch situation (see demo.scenarios)
@@ -23,7 +23,10 @@ export default async (req, context) => {
     const demo = String((req.method === 'POST' ? body.demo : url.searchParams.get('demo')) || '');
     if (!hasData(demo)) return json({ error: 'unknown_demo' }, 400);
     const st = await store('demo-data');   // st.kind says whether this is real Blobs storage or the in-memory fallback
-    if (req.method === 'GET') return json({ data: await getData(demo, st), store: st.kind });
+    if (req.method === 'GET') {   // ?log=1 adds the quality log, so the Backend screen refreshes with one call
+      const [data, log] = await Promise.all([getData(demo, st), url.searchParams.get('log') ? readLog() : undefined]);
+      return json({ data, log, store: st.kind });
+    }
     if (req.method !== 'POST') return json({ error: 'method' }, 405);
     if (body.scenario) { const r = await applyScenario(demo, String(body.scenario), st); return r ? json({ ...r, store: st.kind }) : json({ error: 'unknown_scenario' }, 400); }
     if (body.reset) return json({ data: await resetData(demo, st), store: st.kind });

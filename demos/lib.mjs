@@ -28,9 +28,10 @@ export const setAll = (prefix, map) => Object.entries(map).map(([k, value]) => (
 
 // Say next: the one sentence worth saying now. A flag can carry `say`; the render can also set out.say. The most serious flag wins.
 const RANK = { out: 0, warn: 1, ok: 2 };
+export const bySeverity = (a, b) => RANK[a.s] - RANK[b.s];   // flags.sort(bySeverity): out, then warn, then ok
 export const pickSay = (out) => {
   if (!out) return null;
   if (out.say) return out.say;
-  const f = (out.flags || []).filter((x) => x.say).sort((a, b) => RANK[a.s] - RANK[b.s])[0];
+  const f = (out.flags || []).filter((x) => x.say).sort(bySeverity)[0];
   return f ? f.say : null;
 };

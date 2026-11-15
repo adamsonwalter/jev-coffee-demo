@@ -1,6 +1,6 @@
 // Demo: sales. One self-contained file: the questions Jev is asked, what the screen shows, and the arithmetic.
 // (Copy demos/_template.mjs to make a new one, then add one line to demos/index.mjs.)
-import { v, yes, low, pr, yn, ch } from './lib.mjs';
+import { v, yes, low, pr, yn, ch, bySeverity } from './lib.mjs';
 
 // What Jev is asked. Each key becomes a typed question; answers arrive as fields[key] = { value, confidence, p }.
 const questions = {
@@ -94,7 +94,7 @@ const sales = {
     else if (company) add('New lead: ' + company + ' is not in the CRM yet', 'warn');
     else add('No company heard: say who the call was with', 'warn', 'The call was with…');
     if (['Demo', 'Call'].includes(next)) { if (slot) add('Calendar: ' + slot[1].label + ' is free', 'ok', 'Does ' + slot[1].label + ' suit you?'); else add('No free calendar slots this week', 'out', 'I’m booked out this week. Could we do early next week?'); }
-    flags.sort((a, b) => ({ out: 0, warn: 1, ok: 2 })[a.s] - ({ out: 0, warn: 1, ok: 2 })[b.s]);
+    flags.sort(bySeverity);
     const T = { Now: 'This month', Quarter: 'This quarter', Later: 'Later or unknown' }, B = { Confirmed: 'Confirmed', Quoted: 'Price quoted', Vague: 'Vague', TooHigh: 'Objection: too high', NotDiscussed: 'Not discussed' };
     const D = { Yes: 'Yes', No: 'Needs sign-off', Unknown: 'Unclear' }, N = { Proposal: 'Send proposal', Payment: 'Send payment link', Demo: 'Book demo', Call: 'Follow-up call', None: 'None agreed' };
     const who = [contact, company].filter(Boolean).join(' · ');

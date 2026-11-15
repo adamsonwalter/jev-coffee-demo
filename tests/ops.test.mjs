@@ -49,6 +49,17 @@ test('guard: per-visitor limit per minute, resets next minute, visitors are sepa
   assert.ok((await allow('1.1.1.1', 'jev', t + 61_000, st)).ok);
 });
 
+test('guard: daily cap holds across restarts, and storage is written only every 20th call', async () => {
+  let sets = 0; const m = memoryStore(), st = { ...m, set: async (k, v) => { sets++; return m.set(k, v); } };
+  const t = Date.UTC(2031, 0, 1, 12), key = 'day:2031-01-01';
+  await st.set(key, { n: LIMITS.jevPerDay - 25 }); sets = 0;                     // what earlier instances already used
+  for (let i = 0; i < 25; i++) assert.ok((await allow('ip' + i, 'jev', t, st)).ok);
+  assert.equal(sets, 1); assert.equal((await m.get(key)).n, LIMITS.jevPerDay - 5);
+  const over = await allow('3.3.3.3', 'jev', t, st);
+  assert.equal(over.ok, false); assert.equal(over.error, 'daily_limit');
+  assert.ok((await allow('3.3.3.3', 'data', t, st)).ok);                         // the cap is on Jev calls only
+});
+
 test('guard: origin must match the site (no origin = scripts and tests, allowed)', () => {
   const req = (origin) => new Request('https://site.example/api/order', { headers: origin ? { origin } : {} });
   assert.ok(originOk(req())); assert.ok(originOk(req('https://site.example'))); assert.ok(!originOk(req('https://evil.example'))); assert.ok(!originOk(req('not a url')));

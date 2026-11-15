@@ -1,6 +1,6 @@
 // Backend mode: the operations console behind each demo (stock, calendar, crews, CRM), plus the quality log.
 // Built only from demo.backend (a list of sections) and the demo's data, so a new demo gets a console for free.
-const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+import { el } from './dom.js';
 const clock = (t) => new Date(t).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
 
 // h = { send(effects, note), scenario(id), reset(), clearLog() }; hint = what to say after a scenario was applied
