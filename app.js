@@ -21,6 +21,8 @@ let jevDownAt = 0, sweepTimer = null, throttleTimer = null, pendingText = '', la
 
 const jevDown = () => Date.now() - jevDownAt < T.retryMs;
 const fresh = () => { ctl && ctl.abort(); ctl = new AbortController(); return ctl.signal; };   // newest request wins
+// The resting line (nothing said yet) also carries the version, so you can tell which copy of the app you are looking at.
+function restTag() { sayEl.classList.add('rest'); sayEl.appendChild(el('small', 'vtag', 'Jev v' + VERSION)); }
 function say(text, cls) { sayEl.textContent = cls === 'heard' ? fx.mask(text) : text; sayEl.className = 'say' + (cls ? ' ' + cls : ''); }
 function toast(t) { const n = $('toast'); n.textContent = t; n.classList.add('show'); setTimeout(() => n.classList.remove('show'), 2400); }
 function setEngine(kind, txt) { $('engine').className = 'engine ' + kind; $('engineTxt').textContent = txt; }
@@ -73,7 +75,7 @@ function resetOutput() {
   for (const id of ['under', 'banner', 'extra']) $(id).textContent = '';
   risksEl.textContent = '';
   confirmBtn.disabled = true; confirmBtn.className = ''; confirmBtn.textContent = demo.confirm;
-  say(demo.say, 'idle'); showNext(null);
+  say(demo.say, 'idle'); restTag(); showNext(null);
 }
 
 // ---------- render: demo.render(fields) -> rows, flags, panels ----------
@@ -220,7 +222,7 @@ setInterval(() => { if (document.hidden) return; if (mode === 'backend') refresh
 
 // ---------- Safari bounce: an old home-screen install runs without Safari, where iPhone blocks the microphone ----------
 if (iosApp) {
-  $('bounce').hidden = false;
+  $('bounce').hidden = false; $('bounce').appendChild(el('small', 'vtag', 'Jev v' + VERSION));
   $('bounceBtn').addEventListener('click', () => {
     const url = location.origin + location.pathname + location.hash;
     window.location.href = 'x-safari-' + url;                       // asks iOS to hand the page to Safari

@@ -266,3 +266,7 @@ body.be .wrap, body.be .toast { display: none; }
 .st-try { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; border: 0; background: var(--amber); color: #1a0c06; border-radius: 99px; padding: 9px 16px 9px 12px; font: 700 13px ui-rounded, sans-serif; box-shadow: 0 0 0 3px rgba(255, 176, 64, .2); }
 .st-try svg { width: 12px; height: 12px; fill: currentColor; flex: none; }
 .st-try:active { transform: scale(.98); }
+
+/* Version on the resting line and the Safari prompt */
+.say.rest { flex-direction: column; gap: 4px; }
+.vtag { display: block; font: normal 11px ui-rounded, sans-serif; letter-spacing: .9px; color: var(--dim); opacity: .75; }

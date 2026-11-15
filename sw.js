@@ -2,7 +2,7 @@
 // Network first (always revalidating, never a stale copy from the browser's own cache), falling back to whatever was last loaded.
 // The cache is named for the version: every release starts clean and deletes older caches, so an old page can't meet new scripts.
 // No file list to maintain; /api and /media are never touched (video needs byte ranges).
-const CACHE = 'jev-demo-v3.2';
+const CACHE = 'jev-demo-v3.3';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(
