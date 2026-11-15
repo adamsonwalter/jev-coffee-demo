@@ -20,6 +20,13 @@ body {
 }
 .wrap { width: 100%; max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; gap: calc(8px + var(--g) / 6); }
 
+/* Room to scroll: Safari only shrinks its address bar when the page scrolls, and this screen is exactly one screen tall.
+   The page gets 96px of spare room below the buttons; the buttons themselves stay at the bottom of the visible screen. */
+@supports (height: 100svh) {
+  body { min-height: calc(100% + 96px); }
+  .wrap { flex: 0 0 auto; min-height: calc(100svh - var(--sat) - var(--sab) - 28px); }
+}
+
 .tabs { display: flex; gap: 4px; padding: 4px; background: var(--bg2); border: 1px solid var(--line); border-radius: 16px; }
 .tab { flex: 1; border: 0; background: transparent; color: var(--dim); font: 600 calc(15px + var(--f) / 2) ui-rounded, sans-serif; padding: 9px 4px; border-radius: 12px; white-space: nowrap; transition: background .2s, color .2s; }
 .tab.on { background: var(--cream); color: #1a0c06; }
@@ -102,7 +109,7 @@ h1 span { color: var(--amber); font-style: italic; }
 #bounce small:not(.vtag) { color: var(--dim); font-size: 15px; line-height: 1.5; max-width: 340px; }
 
 /* Backend mode: a different world on purpose (light, cool, tabular), so the switch from voice is obvious */
-body.be { background: #eef2f8; overflow: auto; }
+body.be { background: #eef2f8; overflow: auto; min-height: 100%; }
 body.be .wrap, body.be .toast { display: none; }
 #backend { position: fixed; inset: 0; z-index: 40; overflow-y: auto; background: #eef2f8; color: #1d2636; font-family: "Avenir Next", "Helvetica Neue", sans-serif; padding: calc(var(--sat) + 12px) 16px calc(var(--sab) + 28px); -webkit-user-select: none; user-select: none; }
 #backend > * { max-width: 760px; margin-left: auto; margin-right: auto; }
