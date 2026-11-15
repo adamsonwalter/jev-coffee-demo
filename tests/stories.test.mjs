@@ -1,10 +1,9 @@
 // The stories page must never promise what the app doesn't do. Every "works in the demo" line is rendered through the real demo.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { PERSONAS, LEGEND, BADGE, LAYOUTS } from '../stories.mjs';
 import { DEMOS } from '../demos/index.mjs';
-import { VERSION } from '../version.mjs';
 import { pickSay } from '../demos/lib.mjs';
 import { memoryStore } from '../server/store.mjs';
 import { applyScenario, getData } from '../server/ops.mjs';
@@ -13,10 +12,21 @@ const KINDS = ['ok', 'warn', 'out', 'ask'], TAGS = LEGEND.map(([k]) => k);
 const demo = (id) => DEMOS.find((d) => d.id === id);
 const F = (value) => ({ value, confidence: 0.99, p: null });
 
-test('version: one source, and package.json agrees', () => {
+const ROOT = new URL('../', import.meta.url);
+const VERSION = JSON.parse(readFileSync(new URL('version.json', ROOT), 'utf8')).version;
+const served = (dir = '') => readdirSync(new URL(dir, ROOT)).flatMap((n) => {
+  if (['node_modules', '.git', 'tests', 'package-lock.json', 'version.json', 'README.md', 'media', 'icons'].includes(n)) return [];
+  const rel = dir + n, st = statSync(new URL(rel, ROOT));
+  return st.isDirectory() ? served(rel + '/') : /\.(js|mjs|html|css|toml|webmanifest)$/.test(n) ? [rel] : [];
+});
+
+test('version: version.json is the one place it lives', () => {
   assert.match(VERSION, /^\d+\.\d+$/);
-  assert.equal(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version, VERSION + '.0');
-  assert.match(readFileSync(new URL('../sw.js', import.meta.url), 'utf8'), new RegExp("const CACHE = 'jev-demo-v" + VERSION.replace('.', '\\.') + "'"), 'sw.js cache name carries the version, so each release starts clean');
+  assert.equal(JSON.parse(readFileSync(new URL('package.json', ROOT), 'utf8')).version, undefined, 'package.json carries no version of its own');
+  const files = served(); assert.ok(files.length > 15, 'scanned the app (' + files.length + ' files)');
+  const lit = new RegExp('[\'"`]v?' + VERSION.replace('.', '\\.') + '(\\.0)?[\'"`]|\\bv' + VERSION.replace('.', '\\.') + '\\b');
+  for (const f of files) assert.ok(!lit.test(readFileSync(new URL(f, ROOT), 'utf8')), f + ' hard-wires the version; read it from /version.json (version.js)');
+  assert.match(readFileSync(new URL('netlify.toml', ROOT), 'utf8'), /for = "\/version\.json"[\s\S]*no-store/, 'version.json is never cached');
 });
 
 const REQUIRED = { scene: ['beats'], dialogue: ['beats'], timeline: ['beats'], compare: ['beats', 'without'], parallel: ['cols', 'rows'], board: ['cols', 'rows'], alarm: ['beats'] };

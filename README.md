@@ -10,7 +10,7 @@ Tabs: Coffee (home), Quote (trades), Front desk (clinic booking), Sales (post-ca
 | `backend.js` `ops.js` | The Backend console, built from each demo's `backend`; the browser's copy of the data. |
 | `speech.js` `jev.js` | Speech recognition; the Jev client with the settling pass and the final check (no DOM, tested in Node). |
 | `stories.mjs` `stories.js` | **"What it's for"**: the speech-bubble icon in the header opens stories for a café owner, plumber/roofer, dentist, pool builder, sales manager and grower. `#stories/dentist` links to one person. Stories marked "works in the demo" are rendered through the real demo by `tests/stories.test.mjs`, so the page cannot drift from the app. |
-| `version.mjs` | The version shown small beside Backend and on the stories page. Bump it and `package.json` together (the test checks). |
+| `version.json` `version.js` | **The one place the version lives.** Pages and the service worker read `/version.json` at run time (served `no-store`), so nothing else contains it. To release: edit `version.json`, nothing else. Shown on the resting line, beside Backend, on the stories page and on the Safari prompt. |
 | `fx/` | Effects: pip, Steve the dachshund, censor bleep. `fx/index.js` is the only door. |
 | `server/` | `modes.mjs` read / audit / rewrite (+ name extraction); `gateway.mjs` talks to Jev; `ops.mjs` data and quality log; `guard.mjs` origin + rate limits; `store.mjs` Netlify Blobs (memory fallback). |
 | `netlify/functions/` | `order.mjs` = `POST /api/order` (Jev). `ops.mjs` = `/api/data` and `/api/log`. |

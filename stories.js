@@ -1,7 +1,7 @@
 // The "What it's for" page: stories for the people who ask. Content is in stories.mjs; this only draws it.
 // Each story is told in the layout it declares (scene, dialogue, timeline, compare, parallel, board, alarm), so pages don't read alike.
 import { PERSONAS, LEGEND, BADGE, LEDE } from './stories.mjs';
-import { VERSION } from './version.mjs';
+import { stamp } from './version.js';
 import { DEMOS } from './demos/index.mjs';
 
 const FOOTER = '© 2026 Walter Adamson | BHP 20 years, Head IT Audit - IT Strategy - Corporate Planning - International Bus Development | 100+ AI workflow solutions delivered | linkedin.com/in/adamson | walter@outcomesnow.com';
@@ -32,7 +32,7 @@ export function drawStories(root, personaId, on) {
   sec.appendChild(open);
 
   const foot = el('footer', 'st-foot');
-  foot.append(el('div', 'st-ver', 'Jev v' + VERSION), el('div', 'st-copy', FOOTER));
+  foot.append(stamp(el('div', 'st-ver'), 'Jev v'), el('div', 'st-copy', FOOTER));
   page.append(head, el('p', 'st-lede', LEDE), legend, who, sec, foot);
   root.appendChild(page);
   root.scrollTop = keepScroll;
