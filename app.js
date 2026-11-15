@@ -8,7 +8,7 @@ import * as ops from './ops.js';
 import { drawBackend } from './backend.js';
 import { drawStories } from './stories.js';
 import { PERSONAS } from './stories.mjs';
-import { VERSION } from './version.mjs';
+import { stamp, loadVersion } from './version.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
@@ -22,7 +22,7 @@ let jevDownAt = 0, sweepTimer = null, throttleTimer = null, pendingText = '', la
 const jevDown = () => Date.now() - jevDownAt < T.retryMs;
 const fresh = () => { ctl && ctl.abort(); ctl = new AbortController(); return ctl.signal; };   // newest request wins
 // The resting line (nothing said yet) also carries the version, so you can tell which copy of the app you are looking at.
-function restTag() { sayEl.classList.add('rest'); sayEl.appendChild(el('small', 'vtag', 'Jev v' + VERSION)); }
+function restTag() { sayEl.classList.add('rest'); sayEl.appendChild(stamp(el('small', 'vtag'), 'Jev v')); }
 function say(text, cls) { sayEl.textContent = cls === 'heard' ? fx.mask(text) : text; sayEl.className = 'say' + (cls ? ' ' + cls : ''); }
 function toast(t) { const n = $('toast'); n.textContent = t; n.classList.add('show'); setTimeout(() => n.classList.remove('show'), 2400); }
 function setEngine(kind, txt) { $('engine').className = 'engine ' + kind; $('engineTxt').textContent = txt; }
@@ -222,7 +222,7 @@ setInterval(() => { if (document.hidden) return; if (mode === 'backend') refresh
 
 // ---------- Safari bounce: an old home-screen install runs without Safari, where iPhone blocks the microphone ----------
 if (iosApp) {
-  $('bounce').hidden = false; $('bounce').appendChild(el('small', 'vtag', 'Jev v' + VERSION));
+  $('bounce').hidden = false; $('bounce').appendChild(stamp(el('small', 'vtag'), 'Jev v'));
   $('bounceBtn').addEventListener('click', () => {
     const url = location.origin + location.pathname + location.hash;
     window.location.href = 'x-safari-' + url;                       // asks iOS to hand the page to Safari
@@ -275,7 +275,8 @@ function route() {   // #quote, #quote/backend, #stories or #stories/dentist
 }
 route();
 window.addEventListener('hashchange', route);
-if ($('ver')) $('ver').textContent = 'v' + VERSION;
+if ($('ver')) stamp($('ver'), 'v');
+loadVersion();   // read /version.json; every label above fills in when it arrives
 window.__jevBooted = true;   // tells the watchdog in index.html that the app started
 micHint.textContent = idleHint();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
