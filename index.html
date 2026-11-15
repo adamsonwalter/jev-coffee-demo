@@ -70,6 +70,26 @@
   <small>If nothing happens: delete this icon, open the page in Safari, and use Share › Add to Home Screen again. The new icon opens straight into Safari.</small>
 </div>
 
+<div id="stale" hidden>
+  <h2>Needs a refresh</h2>
+  <p>This page didn’t start, usually because an older copy is stored on your phone.</p>
+  <button id="staleBtn">Fetch the latest</button>
+</div>
+
 <script type="module" src="/app.js"></script>
+<script>
+// The app sets window.__jevBooted when it starts. If it hasn't within 4 s, say so and offer a clean reload (plain old JS so it runs anywhere).
+setTimeout(function () {
+  if (window.__jevBooted) return;
+  var panel = document.getElementById('stale'); if (!panel) return;
+  panel.hidden = false;
+  document.getElementById('staleBtn').onclick = function () {
+    var go = function () { location.reload(); };
+    var sw = navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }) : Promise.resolve();
+    var ca = window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : Promise.resolve();
+    Promise.all([sw, ca]).then(go, go);
+  };
+}, 4000);
+</script>
 </body>
 </html>
