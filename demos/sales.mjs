@@ -84,16 +84,16 @@ const sales = {
     // CRM lookup by company, then by contact name
     const deal = Object.entries(data.deals || {}).find(([, d]) => (company && (norm(d.company).includes(norm(company)) || norm(company).includes(norm(d.company)))) || (contact && norm(d.contact) === norm(contact)));
     const slot = ['Demo', 'Call'].includes(next) ? Object.entries(data.calendar || {}).filter(([, c]) => c.status === 'free').sort(([a], [b]) => a.localeCompare(b))[0] : null;
-    const flags = [];
-    if (yes(f, 'stall')) flags.push({ m: 'Stalling: re-engage within 48 hours', s: 'warn' });
-    if (yes(f, 'competitor')) flags.push({ m: 'Competitor in play: prepare a comparison', s: 'warn' });
-    if (v(f, 'budget') === 'TooHigh') flags.push({ m: 'Price objection: offer a phased scope', s: 'out' });
-    if (v(f, 'decision_maker') === 'No') flags.push({ m: 'Decision maker not on the call: ask for an intro', s: 'warn' });
-    if (next === 'None') flags.push({ m: 'No next step agreed', s: 'out' });
-    if (deal) flags.push({ m: 'CRM: ' + deal[1].company + ' · ' + deal[1].stage + (deal[1].value ? ' · ' + money(deal[1].value) : ''), s: 'ok' });
-    else if (company) flags.push({ m: 'New lead: ' + company + ' is not in the CRM yet', s: 'warn' });
-    else flags.push({ m: 'No company heard: say who the call was with', s: 'warn' });
-    if (['Demo', 'Call'].includes(next)) flags.push(slot ? { m: 'Calendar: ' + slot[1].label + ' is free', s: 'ok' } : { m: 'No free calendar slots this week', s: 'out' });
+    const flags = [], add = (m, s, say) => flags.push(say ? { m, s, say } : { m, s });   // say = what to say next, plain speech
+    if (yes(f, 'stall')) add('Stalling: re-engage within 48 hours', 'warn', 'What would help you decide? I’ll check back in a couple of days.');
+    if (yes(f, 'competitor')) add('Competitor in play: prepare a comparison', 'warn', 'Who else are you looking at? I’ll send you a comparison.');
+    if (v(f, 'budget') === 'TooHigh') add('Price objection: offer a phased scope', 'out', 'I can phase it so the first stage costs less. Shall I outline that?');
+    if (v(f, 'decision_maker') === 'No') add('Decision maker not on the call: ask for an intro', 'warn', 'Who else needs to sign off? Could you introduce me?');
+    if (next === 'None') add('No next step agreed', 'out', 'Can we book a time this week to take the next step?');
+    if (deal) add('CRM: ' + deal[1].company + ' · ' + deal[1].stage + (deal[1].value ? ' · ' + money(deal[1].value) : ''), 'ok');
+    else if (company) add('New lead: ' + company + ' is not in the CRM yet', 'warn');
+    else add('No company heard: say who the call was with', 'warn', 'The call was with…');
+    if (['Demo', 'Call'].includes(next)) { if (slot) add('Calendar: ' + slot[1].label + ' is free', 'ok', 'Does ' + slot[1].label + ' suit you?'); else add('No free calendar slots this week', 'out', 'I’m booked out this week. Could we do early next week?'); }
     flags.sort((a, b) => ({ out: 0, warn: 1, ok: 2 })[a.s] - ({ out: 0, warn: 1, ok: 2 })[b.s]);
     const T = { Now: 'This month', Quarter: 'This quarter', Later: 'Later or unknown' }, B = { Confirmed: 'Confirmed', Quoted: 'Price quoted', Vague: 'Vague', TooHigh: 'Objection: too high', NotDiscussed: 'Not discussed' };
     const D = { Yes: 'Yes', No: 'Needs sign-off', Unknown: 'Unclear' }, N = { Proposal: 'Send proposal', Payment: 'Send payment link', Demo: 'Book demo', Call: 'Follow-up call', None: 'None agreed' };

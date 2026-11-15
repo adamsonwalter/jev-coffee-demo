@@ -117,7 +117,9 @@ const coffee = {
     const stock = data.stock, lowAt = data.low;
     const qty = (n) => Number(stock[n]) || 0;
     const state = (n) => (qty(n) <= 0 ? 'out' : qty(n) <= lowAt ? 'low' : 'ok');
-    const alts = (list, not) => { const a = list.filter((n) => n !== not && qty(n) > 0).slice(0, 2); return a.length ? 'Offer ' + a.join(' or ') : 'No substitute in stock'; };
+    const altList = (list, not) => list.filter((n) => n !== not && qty(n) > 0).slice(0, 2);
+    const alts = (list, not) => { const a = altList(list, not); return a.length ? 'Offer ' + a.join(' or ') : 'No substitute in stock'; };
+    const either = (list, not) => altList(list, not).map((n) => n.toLowerCase()).join(' or ');   // for speech: "almond or skim"
     const drink = f.drink && f.drink.value !== 'None' ? v(f, 'drink') : null;
     const sizeV = f.size && f.size.value !== 'Unspecified' && (f.size.confidence == null || f.size.confidence >= TUNING.guess) ? v(f, 'size') : null;
     const size = sizeV || (drink ? 'Medium' : null);
@@ -136,30 +138,31 @@ const coffee = {
     const temp = drink ? (iced ? (yes(f, 'no_ice_milk_top') ? 'Iced, no ice' : 'Iced') + (hot ? ', extra hot' : '') : (hot ? 'Extra hot' : 'Hot')) : null;
 
     const flags = [];
-    const add = (m, s) => flags.push({ m, s });
+    const add = (m, s, say) => flags.push(say ? { m, s, say } : { m, s });   // say = what to say next, plain speech
     if (milk && MILKS.includes(milk)) {
-      if (state(milk) === 'out') add(milk + ' milk is out. ' + alts(MILKS, milk), 'out');
-      else if (state(milk) === 'low') add(milk + ' milk low (' + qty(milk) + ' left). ' + alts(MILKS, milk), 'warn');
+      const alt = either(MILKS, milk), m = milk.toLowerCase();
+      if (state(milk) === 'out') add(milk + ' milk is out. ' + alts(MILKS, milk), 'out', 'Sorry, we’re out of ' + m + ' milk.' + (alt ? ' Would ' + alt + ' work?' : ''));
+      else if (state(milk) === 'low') add(milk + ' milk low (' + qty(milk) + ' left). ' + alts(MILKS, milk), 'warn', 'We’re nearly out of ' + m + ' milk.' + (alt ? ' How about ' + alt + '?' : ''));
     }
     for (const [key, name] of Object.entries(FOOD)) {
       if (!yes(f, key)) continue;
-      if (state(name) === 'out') add(name + ' sold out. ' + alts(Object.values(FOOD), name), 'out');
+      if (state(name) === 'out') { const alt = either(Object.values(FOOD), name); add(name + ' sold out. ' + alts(Object.values(FOOD), name), 'out', 'Sorry, the ' + name.toLowerCase() + 's are gone.' + (alt ? ' Would a ' + alt.replace(' or ', ' or a ') + ' do instead?' : '')); }
       else if (state(name) === 'low') add('Only ' + qty(name) + ' ' + name.toLowerCase() + (qty(name) === 1 ? '' : 's') + ' left', 'warn');
     }
     const shotsNeeded = (['Babycino', 'Drip Coffee', 'Cold Brew'].includes(drink) ? 0 : 1) + (yes(f, 'extra_shot') ? 1 : 0);   // no espresso in these
-    if (drink && qty('Espresso shots') < shotsNeeded) add('Out of espresso shots', 'out');
-    if (yes(f, 'syrup') && state('Vanilla syrup') === 'out') add('Vanilla syrup is out', 'out');
-    if (yes(f, 'outside_blend')) add('Can’t blend outside food', 'out');
-    if (sizeV === 'Trenta' && !iced && !COLD_OK.includes(drink)) add('Trenta is for cold drinks only', 'out');
-    if (drink === 'Secret Menu') add('Nickname only: ask the base drink and syrups', 'warn');
-    if (yes(f, 'no_foam') && drink === 'Cappuccino') add('No-foam cappuccino is a latte: confirm', 'warn');
-    if (drink === 'Macchiato') add('Macchiato: short espresso with foam, or a sweet caramel one?', 'warn');
-    if (v(f, 'milk') === 'Split') add('Split milks: confirm the ratio', 'warn');
-    if (iced && yes(f, 'extra_hot')) add('Extra hot on a cold drink: clarify', 'warn');
-    if (yes(f, 'no_ice_milk_top')) add('No ice, milk to the top: latte or just a splash?', 'warn');
-    if (yes(f, 'regular_word')) add('“Regular” is unclear: ask size and milk', 'warn');
+    if (drink && qty('Espresso shots') < shotsNeeded) add('Out of espresso shots', 'out', 'Sorry, we’ve run out of espresso shots.');
+    if (yes(f, 'syrup') && state('Vanilla syrup') === 'out') add('Vanilla syrup is out', 'out', 'Sorry, we’re out of vanilla syrup.');
+    if (yes(f, 'outside_blend')) add('Can’t blend outside food', 'out', 'Sorry, we can’t blend outside food.');
+    if (sizeV === 'Trenta' && !iced && !COLD_OK.includes(drink)) add('Trenta is for cold drinks only', 'out', 'Trenta is for cold drinks only. Would you like it iced?');
+    if (drink === 'Secret Menu') add('Nickname only: ask the base drink and syrups', 'warn', 'What’s the base drink, and any syrups?');
+    if (yes(f, 'no_foam') && drink === 'Cappuccino') add('No-foam cappuccino is a latte: confirm', 'warn', 'A cappuccino with no foam is a latte. Is that OK?');
+    if (drink === 'Macchiato') add('Macchiato: short espresso with foam, or a sweet caramel one?', 'warn', 'A short espresso with a dash of foam, or the sweet caramel one?');
+    if (v(f, 'milk') === 'Split') add('Split milks: confirm the ratio', 'warn', 'How would you like the split? Half and half?');
+    if (iced && yes(f, 'extra_hot')) add('Extra hot on a cold drink: clarify', 'warn', 'Did you want that hot, or iced?');
+    if (yes(f, 'no_ice_milk_top')) add('No ice, milk to the top: latte or just a splash?', 'warn', 'Would you like a latte, or just a splash of milk?');
+    if (yes(f, 'regular_word')) add('“Regular” is unclear: ask size and milk', 'warn', 'What size and milk would you like with that?');
     if (drink === 'Cafecito' || yes(f, 'sugar_in_shot')) add('Cafecito: whip sugar into the first drops, not the puck', 'warn');
-    if (drink && !milk && !['Espresso', 'Long Black', 'Americano', 'Cafecito', 'Cold Brew', 'Drip Coffee', 'Secret Menu', 'Babycino'].includes(drink)) add('Milk not heard: ask customer', 'warn');
+    if (drink && !milk && !['Espresso', 'Long Black', 'Americano', 'Cafecito', 'Cold Brew', 'Drip Coffee', 'Secret Menu', 'Babycino'].includes(drink)) add('Milk not heard: ask customer', 'warn', 'What milk would you like?');
     const INFO = { Piccolo: 'Piccolo: single ristretto, small glass', Magic: 'Magic: double ristretto, small cup, Melbourne style', 'Long Mac Topped Up': 'Long mac topped up: charge as long mac plus milk', Babycino: 'Babycino: froth for the kids, no coffee' };
     if (INFO[drink]) add(INFO[drink], drink === 'Long Mac Topped Up' ? 'warn' : 'ok');
     if (drink && !flags.length) add('No stock issues', 'ok');

@@ -1,6 +1,6 @@
 // The screen: tabs, rows, flags, and the wiring between speech (speech.js), Jev (jev.js) and effects (fx/).
 import { DEMOS } from './demos/index.mjs';
-import { TUNING as T } from './demos/lib.mjs';
+import { TUNING as T, pickSay } from './demos/lib.mjs';
 import { post, settle, finalCheck, Stale } from './jev.js';
 import { fx } from './fx/index.js';
 import { createListener, voiceProblem, idleHint, iosApp } from './speech.js';
@@ -50,13 +50,22 @@ function syncUrl() {   // while the stories page is open the URL belongs to it
   const h = mode === 'backend' ? '#' + demo.id + '/backend' : demo.id === DEMOS[0].id ? '' : '#' + demo.id;
   try { history.replaceState(null, '', location.pathname + h); } catch (_) {}
 }
-function startTry() {   // one rotating "Try saying" line
+function startTry() {   // one rotating "Try saying" line. While Jev has something worth saying next, the same slot shows that instead (showNext).
   clearInterval(tryTimer);
-  const line = el('i'); $('try').textContent = ''; $('try').append(el('b', '', 'Try saying'), line);
+  const box = $('try'); box.className = 'try'; delete box.dataset.next;
+  const line = el('i'); box.textContent = ''; box.append(el('b', '', 'Try saying'), line);
   tryIdx = Math.floor(Math.random() * demo.chips.length);
   const show = () => { line.style.opacity = 0; setTimeout(() => { line.textContent = '“' + demo.chips[tryIdx++ % demo.chips.length] + '”'; line.style.opacity = 1; }, 220); };
   line.style.transition = 'opacity .22s'; show();
   if (demo.chips.length > 1) tryTimer = setInterval(show, 5000);
+}
+function showNext(text) {   // "Say next": one sentence in the Try saying slot, so the screen gets no new block. No sentence -> examples come back.
+  const box = $('try');
+  if (!text) { if (box.dataset.next) startTry(); return; }
+  if (box.dataset.next === text) return;
+  clearInterval(tryTimer);
+  box.className = 'try next'; box.dataset.next = text; box.textContent = '';
+  box.append(el('b', '', 'Say next'), el('i', '', '“' + text + '”'));
 }
 function resetOutput() {
   lastFields = null; lastText = ''; lastRender = null; lastChecked = ''; pins = {}; clearTimeout(sweepTimer);
@@ -64,14 +73,14 @@ function resetOutput() {
   for (const id of ['under', 'banner', 'extra']) $(id).textContent = '';
   risksEl.textContent = '';
   confirmBtn.disabled = true; confirmBtn.className = ''; confirmBtn.textContent = demo.confirm;
-  say(demo.say, 'idle');
+  say(demo.say, 'idle'); showNext(null);
 }
 
 // ---------- render: demo.render(fields) -> rows, flags, panels ----------
 function render(f, settled, tags) {
   const out = demo.render(f, ops.data(demo.id));
   if (!out.rows.some((r) => r && r[0]) && !(out.flags || []).length) out.flags = [{ m: 'Heard you, but no order details yet. Keep talking.', s: 'warn' }];
-  lastRender = out;
+  lastRender = out; showNext(pickSay(out));
   let changed = false;
   [...rowsEl.children].forEach((row, i) => {
     const n = row.querySelector('.v'), [val, unsure] = out.rows[i] || [], text = val || '—', tag = tags && tags[i];
