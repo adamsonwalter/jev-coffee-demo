@@ -97,7 +97,7 @@ h1 span { color: var(--amber); font-style: italic; }
 
 /* Safari bounce: shown only inside an iPhone home-screen app, where the microphone is blocked */
 #bounce { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 32px; text-align: center; }
-#bounce[hidden][hidden], #backend[hidden] { display: none; }
+#bounce[hidden], #backend[hidden] { display: none; }
 #bounce h2 { margin: 0; font: 600 26px ui-serif, "New York", Georgia, serif; color: var(--cream); }
 #bounce p { margin: 0; color: var(--ink); line-height: 1.45; max-width: 320px; }
 #bounce button { border: 0; border-radius: 16px; padding: 16px 28px; font: 700 18px ui-rounded, sans-serif; background: var(--amber); color: #1a0c06; }
