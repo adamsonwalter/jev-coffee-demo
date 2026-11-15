@@ -16,6 +16,7 @@ const F = (value) => ({ value, confidence: 0.99, p: null });
 test('version: one source, and package.json agrees', () => {
   assert.match(VERSION, /^\d+\.\d+$/);
   assert.equal(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version, VERSION + '.0');
+  assert.match(readFileSync(new URL('../sw.js', import.meta.url), 'utf8'), new RegExp("const CACHE = 'jev-demo-v" + VERSION.replace('.', '\\.') + "'"), 'sw.js cache name carries the version, so each release starts clean');
 });
 
 const REQUIRED = { scene: ['beats'], dialogue: ['beats'], timeline: ['beats'], compare: ['beats', 'without'], parallel: ['cols', 'rows'], board: ['cols', 'rows'], alarm: ['beats'] };

@@ -39,7 +39,7 @@ function select(id) {
   rowsEl.textContent = '';
   demo.labels.forEach((l) => { const r = el('div', 'row'); r.append(el('label', '', l), el('div', 'v empty', '—')); rowsEl.appendChild(r); });
   $('demoBtn').hidden = !demo.video;
-  $('storiesBtn').href = '#stories/' + personaFor(demo.id);   // the icon opens the stories for the tab you're on
+  const sb = $('storiesBtn'); if (sb) sb.href = '#stories/' + personaFor(demo.id);   // the icon opens the stories for the tab you're on
   startTry(); fx.tab(demo.id);
   resetOutput(); setEngine('', 'ready'); fx.reset();
 }
@@ -244,9 +244,10 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('player').hidd
 buildTabs();
 // ---------- stories: "What it's for", opened from the icon in the header; #stories/dentist links straight to one person's stories ----------
 function showStories(personaId) {
+  const root = $('stories'); if (!root) return;   // an older page without the stories element: stay on the demo
   listener.stop(); storiesOpen = true;
   if (!document.querySelector('.tab.on')) select(DEMOS[0].id);   // a direct link still needs the demo behind it
-  const root = $('stories'), wasHidden = root.hidden;
+  const wasHidden = root.hidden;
   drawStories(root, personaId || personaFor(demo.id), {
     pick: (pid) => { location.hash = '#stories/' + pid; },
     close: () => { location.hash = lastHash; },
@@ -258,7 +259,7 @@ function showStories(personaId) {
   });
   root.hidden = false; if (wasHidden) root.scrollTop = 0;
 }
-function hideStories() { storiesOpen = false; $('stories').hidden = true; }
+function hideStories() { storiesOpen = false; const root = $('stories'); if (root) root.hidden = true; }
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && storiesOpen) location.hash = lastHash; });
 
 function route() {   // #quote, #quote/backend, #stories or #stories/dentist
@@ -272,6 +273,7 @@ function route() {   // #quote, #quote/backend, #stories or #stories/dentist
 }
 route();
 window.addEventListener('hashchange', route);
-$('ver').textContent = 'v' + VERSION;
+if ($('ver')) $('ver').textContent = 'v' + VERSION;
+window.__jevBooted = true;   // tells the watchdog in index.html that the app started
 micHint.textContent = idleHint();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
