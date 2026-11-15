@@ -25,3 +25,12 @@ export const pr = (f, k, opt) => (f[k] && f[k].p && f[k].p[opt]) || 0;          
 
 // For scenarios: set many numbers or values at once. setAll('stock', { Oat: 2, Soy: 0 }) -> effects.
 export const setAll = (prefix, map) => Object.entries(map).map(([k, value]) => ({ op: 'set', path: `${prefix}.${k}`, value }));
+
+// Say next: the one sentence worth saying now. A flag can carry `say`; the render can also set out.say. The most serious flag wins.
+const RANK = { out: 0, warn: 1, ok: 2 };
+export const pickSay = (out) => {
+  if (!out) return null;
+  if (out.say) return out.say;
+  const f = (out.flags || []).filter((x) => x.say).sort((a, b) => RANK[a.s] - RANK[b.s])[0];
+  return f ? f.say : null;
+};

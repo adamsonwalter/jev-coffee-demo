@@ -41,7 +41,7 @@ export function drawStories(root, personaId, on) {
 // ---------- small parts ----------
 const pills = (see) => { const d = el('div', 'risks'); see.forEach(([k, t]) => d.appendChild(el('span', 'risk ' + k, t))); return d; };
 const sayLine = (t) => el('div', 'st-say', '“' + t + '”');
-const nextBox = (t) => { const n = el('div', 'st-next'); n.append(el('b', '', 'Say next'), el('span', '', t)); return n; };
+const nextBox = (t) => { const n = el('div', 'st-next'); n.append(el('b', '', 'Say next'), el('span', '', '“' + t + '”')); return n; };
 const dot = (kind) => el('i', 'st-dot ' + kind);
 
 function story(p, s, on) {
@@ -52,7 +52,9 @@ function story(p, s, on) {
   LAYOUT[s.layout](a, s);
   if (s.kicker) a.appendChild(el('p', 'st-kicker', s.kicker));
   if (s.try) {
-    const b = el('button', 'st-try', s.try.scenario ? 'Set it up and try it' : 'Try it on the ' + tabName(p.tab) + ' tab');
+    const b = el('button', 'st-try');   // filled and iconed so it can't be mistaken for story text
+    b.innerHTML = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 1l7 4-7 4z"/></svg>';
+    b.append(el('span', '', s.try.scenario ? 'Set it up and try it' : 'Try it on the ' + tabName(p.tab) + ' tab'));
     b.onclick = () => on.tryIt(p.tab, s.try); a.appendChild(b);
   }
   return a;
@@ -76,7 +78,7 @@ const LAYOUT = {
     s.beats.forEach((b) => {
       const row = el('div', 'st-bub ' + b.who + (b.suggested ? ' suggested' : ''));
       if (b.suggested) row.appendChild(el('b', '', 'Say next'));
-      row.appendChild(el('span', '', b.say));
+      row.appendChild(el('span', '', b.suggested ? '“' + b.say + '”' : b.say));
       chat.appendChild(row);
       if (b.see) { const scr = el('div', 'st-screen'); scr.append(el('b', '', 'On your screen'), pills(b.see)); chat.appendChild(scr); }
     });
@@ -118,6 +120,7 @@ const LAYOUT = {
       const [first, ...rest] = b.see;
       a.appendChild(el('div', 'st-alarm', first[1]));
       if (rest.length) a.appendChild(pills(rest));
+      if (b.next) a.appendChild(nextBox(b.next));
     });
   },
 };

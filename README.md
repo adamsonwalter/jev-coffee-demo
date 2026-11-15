@@ -24,6 +24,9 @@ Tabs: Coffee (home), Quote (trades), Front desk (clinic booking), Sales (post-ca
 ## Scenarios
 Each demo's Backend has a **Scenarios** card: one tap sets up a pitch situation ("Friday rush", "Fully booked week", "Storm week", "End of quarter") from clean data, then says what to say in Voice. Defined in the demo as `scenarios: [{ id, name, blurb, say, effects(data) }]`. `tests/ops.test.mjs` checks each one applies cleanly and that the voice then pings what it should; add the expected pings to `SCEN` there when you add a scenario.
 
+## Say next
+Each flag in a demo's `render` can carry `say`: one plain-speech sentence (72 characters or fewer, enforced by `tests/say.test.mjs`) such as `We’re nearly out of oat milk. How about almond or skim?`. `pickSay` in `demos/lib.mjs` takes the most serious one, and the screen shows it in the "Try saying" slot, so it takes no extra space; with nothing to say, the examples come back. Stories marked "works in the demo" are checked against these sentences.
+
 ## How a conversation flows
 words -> live read about every 0.6 s (Jev for choices, extraction for names) -> render reads the backend data and pings stockouts or no availability -> after a pause or mic-off: **settle** unsure fields -> **final check** (Jev audits each row; clear mismatches are rewritten, tagged, chimed, and logged) -> **confirm** applies the demo's effects to the backend.
 

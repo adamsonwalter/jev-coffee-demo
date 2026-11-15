@@ -13,7 +13,8 @@
 //   parallel  what they said beside what the screen said               cols: [a, b], rows: [{ said, see: [kind, text] }], proof?
 //   board     a list as it looks in the Backend                         cols: [a, b], rows: [[left, right, kind]], say?, next?
 //   alarm     one line that must not be missed                          beats: [{ say, see, proof? }]
-// see: [kind, text] with kind ok | warn | out | ask (ask = a prompt for something not yet said). `next` = what to say next: not a live feature yet.
+// see: [kind, text] with kind ok | warn | out | ask (ask = a prompt for something not yet said).
+// `next` / suggested bubble = what to say next. In a 'today' story it must equal what the app really suggests (the test checks); in a 'yours' story it is illustrative.
 
 import { DEMOS } from './demos/index.mjs';
 
@@ -42,15 +43,16 @@ export const PERSONAS = [
     checks: 'Checks the stockroom: milk, food, espresso shots.',
     stories: [
       {
-        id: 'oat', title: 'The oat that ran out at 7:10', badge: 'today', tags: ['checked', 'warned'], layout: 'compare',
+        id: 'oat', title: 'The oat that ran out at 7:10', badge: 'today', tags: ['checked', 'warned', 'next'], layout: 'compare',
         scene: 'Friday rush. Oat is down to two, there’s one muffin left, and nobody has counted since opening.',
         without: 'You make the flat white. Then you find the oat’s gone and that was the last muffin. Remake, apology, a regular who walks next door.',
         beats: [{
           say: 'A large oat flat white and a muffin',
           see: [['warn', 'Oat milk low (2 left). Offer Almond or Skim'], ['warn', 'Only 1 muffin left']],
+          next: 'We’re nearly out of oat milk. How about almond or skim?',
           proof: { scenario: 'rush', fields: { drink: 'Flat White', size: 'Large', milk: 'Oat', muffin: 'yes' } },
         }],
-        kicker: 'Same customer, same order. You said “I can do almond, and that’s the last muffin” before anyone picked up a jug.',
+        kicker: 'Same customer, same order. The screen gave you the sentence before anyone picked up a jug.',
         try: { say: 'A large oat flat white and a muffin', scenario: 'rush' },
       },
       {
@@ -80,7 +82,7 @@ export const PERSONAS = [
     checks: 'Checks the dispatch board: crews free today and tomorrow, parts on the vans.',
     stories: [
       {
-        id: 'hotwater', title: 'Hot water’s gone, strata block', badge: 'today', tags: ['checked', 'warned'], layout: 'dialogue',
+        id: 'hotwater', title: 'Hot water’s gone, strata block', badge: 'today', tags: ['checked', 'warned', 'next'], layout: 'dialogue',
         scene: 'You’re up a ladder with the customer on speaker, and it’s storm week.',
         beats: [
           {
@@ -88,19 +90,20 @@ export const PERSONAS = [
             see: [['out', 'Emergency call-out loading (+25%)'], ['out', 'No plumber free today. Tomorrow: 1 crew'], ['out', 'Hot water unit 250L out of stock: 2-day lead time'], ['warn', 'Access window limits the schedule (+10%)']],
             proof: { scenario: 'storm', fields: { trade: 'Plumbing', issue: 'HotWater', scope: 'Small', access: 'Restricted', urgency: 'Emergency' } },
           },
-          { who: 'you', say: 'Tomorrow’s the earliest I can get someone to you, and the unit’s a two-day wait. I’m sending a price range to your phone now.' },
+          { who: 'you', suggested: true, say: 'The earliest I can get a plumber to you is tomorrow.' },
         ],
         try: { say: 'Hot water has gone and the tank is leaking, strata block, weekdays only', scenario: 'storm' },
       },
       {
-        id: 'gas', title: '“I can smell gas”', badge: 'today', tags: ['warned'], layout: 'alarm',
+        id: 'gas', title: '“I can smell gas”', badge: 'today', tags: ['warned', 'next'], layout: 'alarm',
         scene: 'The call you can’t get wrong.',
         beats: [{
           say: 'I can smell gas in the kitchen',
           see: [['out', 'Gas smell: leave the house, call the gas emergency line, then book'], ['out', 'Emergency call-out loading (+25%)']],
+          next: 'Please leave the house now and call the gas emergency line.',
           proof: { fields: { trade: 'Gas', issue: 'Gas', scope: 'Small', access: 'Easy', urgency: 'Emergency' } },
         }],
-        kicker: 'You read it out. You don’t have to remember it. A burst pipe gets “turn the water off at the main now” the same way.',
+        kicker: 'You read it out. You don’t have to remember it. A burst pipe gets “turn the water off at the main right now” the same way.',
         try: { say: 'I can smell gas in the kitchen' },
       },
       {
@@ -127,7 +130,7 @@ export const PERSONAS = [
           ['Ridge capping lifted, no leak yet', 'Friday', 'ok'],
         ],
         say: 'Leaking tile roof, two storeys, ceiling already stained, urgent',
-        next: '“Put a bucket under it and keep clear of the stain. We’ll be there tomorrow morning.”',
+        next: 'Put a bucket under it and keep clear of the stain. We’ll be there tomorrow morning.',
       },
     ],
   },
@@ -145,11 +148,12 @@ export const PERSONAS = [
         ],
       },
       {
-        id: 'newpatient', title: 'The new patient', badge: 'today', tags: ['asked'], layout: 'scene',
+        id: 'newpatient', title: 'The new patient', badge: 'today', tags: ['asked', 'next'], layout: 'scene',
         scene: 'First call from someone who has never been in. Reception has the checklist in their head, on a good day.',
         beats: [{
           say: 'Hi, I’d like a check-up, I haven’t been before',
           see: [['ask', 'New patient: collect ID and Medicare'], ['ask', 'Name not heard: ask the caller']],
+          next: 'As a new patient, please bring photo ID and your Medicare card.',
           proof: { fields: { reason: 'Checkup', urgency: 'Routine', red_flag: 'no', patient: 'New', day: 'Unspecified', time: 'Unspecified' } },
         }],
         kicker: 'The screen asks for whatever the caller hasn’t said yet.',
@@ -161,7 +165,7 @@ export const PERSONAS = [
         beats: [
           { at: '0:00', say: 'My face is swelling and it hurts to swallow' },
           { at: '0:02', see: [['out', 'Possible emergency. Do not book.']] },
-          { at: '0:03', see: [['out', 'Transfer to the dentist now. If breathing is hard, tell them to call 000.']], next: '“Stay on the line, I’m getting the dentist now.”' },
+          { at: '0:03', see: [['out', 'Transfer to the dentist now. If breathing is hard, tell them to call 000.']], next: 'Stay on the line, I’m getting the dentist now.' },
         ],
         kicker: 'It never decides for you. It puts the right sentence in front of reception in the first three seconds.',
       },
@@ -188,7 +192,7 @@ export const PERSONAS = [
         beats: [{
           say: '…and we want it finished before Christmas',
           see: [['out', 'Dig crew booked until mid-February'], ['out', 'Shell lead time pushes handover past Christmas']],
-          next: '“The honest answer is late February. I can hold a dig date with the deposit.”',
+          next: 'The honest answer is late February. I can hold a dig date with the deposit.',
         }],
       },
       {
@@ -197,7 +201,7 @@ export const PERSONAS = [
         beats: [
           { at: '2:10pm', say: 'Move the steps to the shallow end and add a swim jet' },
           { at: '2:11pm', see: [['warn', 'Variation: plumbing and shell change'], ['warn', 'Adds about two days to the schedule'], ['ask', 'Written approval needed before work starts']] },
-          { at: '2:12pm', label: 'You’re still standing there.', next: '“I’ll text you the price in a minute. A yes by Friday keeps the date.”' },
+          { at: '2:12pm', label: 'You’re still standing there.', next: 'I’ll text you the price in a minute. A yes by Friday keeps the date.' },
         ],
         kicker: 'Nobody argues at handover about what was agreed.',
       },
@@ -223,7 +227,7 @@ export const PERSONAS = [
         try: { say: 'Met Elena at Redgum Coffee, keen, book a follow-up call', scenario: 'open' },
       },
       {
-        id: 'nextstep', title: 'What every rep says, and what you’d say back', badge: 'today', tags: ['asked'], layout: 'parallel',
+        id: 'nextstep', title: 'What every rep says, and what you’d say back', badge: 'today', tags: ['asked', 'next'], layout: 'parallel',
         scene: 'A friendly call that ends with “I’ll come back to you” is the sound of a deal going cold.',
         cols: ['The rep says', 'The screen says'],
         rows: [
@@ -231,6 +235,7 @@ export const PERSONAS = [
           { said: '“Keen, but she wants to think about it.”', see: ['warn', 'Stalling: re-engage within 48 hours'] },
         ],
         proof: { fields: { interest: 'Warm', budget: 'Vague', timeline: 'Later', decision_maker: 'Unknown', stall: 'yes', next_step: 'None', company: 'Redgum Coffee' } },
+        next: 'Can we book a time this week to take the next step?',
         kicker: 'Twenty reps get the same prompt, not the one you happen to remember to give.',
         try: { say: 'Spoke to Elena at Redgum Coffee, keen but budget not discussed, she will come back to me' },
       },
@@ -266,7 +271,7 @@ export const PERSONAS = [
           { said: '20 trays rhubarb', see: ['warn', '12 cut, 8 more Monday'] },
           { said: 'Silverbeet', see: ['out', 'None planted this season'] },
         ],
-        next: '“Twelve rhubarb Thursday, eight Monday, and no silverbeet this month.”',
+        next: 'Twelve rhubarb Thursday, eight Monday, and no silverbeet this month.',
       },
       {
         id: 'missing', title: 'The order that’s missing something', badge: 'yours', tags: ['asked'], layout: 'scene',
@@ -283,7 +288,7 @@ export const PERSONAS = [
         say: 'Add twenty trays of herbs for Thursday',
         cols: ['Thursday', 'Capacity'],
         rows: [['Cold room', '54 of 60 trays', 'warn'], ['Wednesday pickers', 'Fully booked', 'out'], ['Thursday truck', 'Room for 2 more pallets', 'ok']],
-        next: '“I can do ten herbs Thursday and ten Friday.”',
+        next: 'I can do ten herbs Thursday and ten Friday.',
       },
     ],
   },

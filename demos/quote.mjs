@@ -104,28 +104,29 @@ const quote = {
     if (!trade || !scope) return { rows: [[null], [null], [null], [null], [null], [null]], flags: [], ok: false };
     const fixed = data.fixed[issue];
     let [lo, hi] = fixed || data.scope[scope]; if (!fixed) { const x = data.tradeX[trade] || 1; lo *= x; hi *= x; }
-    const flags = [], adds = [], add = (m, s2) => flags.push({ m, s: s2 });
+    const flags = [], adds = [], add = (m, s2, say) => flags.push(say ? { m, s: s2, say } : { m, s: s2 });   // say = what to say next, plain speech
     const urg = v(f, 'urgency');
-    if (issue === 'Gas') add('Gas smell: leave the house, call the gas emergency line, then book', 'out');
-    if (issue === 'Burst') add('Burst pipe: turn the water off at the main now', 'warn');
+    if (issue === 'Gas') add('Gas smell: leave the house, call the gas emergency line, then book', 'out', 'Please leave the house now and call the gas emergency line.');
+    if (issue === 'Burst') add('Burst pipe: turn the water off at the main now', 'warn', 'Turn the water off at the main right now. We’ll get someone to you.');
     if (issue === 'Blocked') add('Blocked drain: hand tools on the spot, camera or waterjet quoted extra', 'warn');
-    if (issue === 'Power') add('Power failure: check the safety switch first, it may save a callout', 'warn');
-    if (issue === 'Lockout') add('Lockout: verify ID and ownership first', 'warn');
+    if (issue === 'Power') add('Power failure: check the safety switch first, it may save a callout', 'warn', 'Could you check the safety switch first? It may save a callout.');
+    if (issue === 'Lockout') add('Lockout: verify ID and ownership first', 'warn', 'Can I check your ID, and that you own or rent the place?');
     if (v(f, 'access') === 'Restricted') { lo *= 1.1; hi *= 1.1; add('Access window limits the schedule (+10%)', 'warn'); }
     if (yes(f, 'hidden_risk')) { lo *= 1.2; hi *= 1.2; add('Hidden-damage contingency (+20%)', 'warn'); }
     if (urg === 'Emergency') { lo *= 1.25; hi *= 1.25; add('Emergency call-out loading (+25%)', 'out'); }
     if (yes(f, 'old_building')) { adds.push(['Asbestos / lead check before demolition', 450, 900]); add('Old building: test before you touch it', 'out'); }
     if (yes(f, 'permit')) { adds.push(['Permit and certifier sign-off', 300, 1200]); add('Licensed sign-off or permit likely', 'warn'); }
-    if (!fixed && low(f, 'scope')) add('Scope unclear: ask how many rooms and days', 'warn');
+    if (!fixed && low(f, 'scope')) add('Scope unclear: ask how many rooms and days', 'warn', 'Roughly how many rooms, and how many days of work?');
     if (issue === 'Blocked') adds.push(['If a camera or waterjet is needed', 400, 900]);
     // Operational checks: is anyone free, and is the part in stock?
     const crew = data.crew && data.crew[trade], label = TRADE[trade] || trade, part = partFor(issue, trade);
     if (crew) {
-      if (urg === 'Emergency') add(crew.today > 0 ? label + ' free today (' + crew.today + ' crew)' : 'No ' + label.toLowerCase() + ' free today. ' + (crew.tomorrow > 0 ? 'Tomorrow: ' + crew.tomorrow + ' crew' : 'Nothing tomorrow either'), crew.today > 0 ? 'ok' : 'out');
-      else if (crew.today + crew.tomorrow === 0) add(label + ' fully booked. Offer next week', 'warn');
+      if (urg === 'Emergency') add(crew.today > 0 ? label + ' free today (' + crew.today + ' crew)' : 'No ' + label.toLowerCase() + ' free today. ' + (crew.tomorrow > 0 ? 'Tomorrow: ' + crew.tomorrow + ' crew' : 'Nothing tomorrow either'), crew.today > 0 ? 'ok' : 'out',
+        crew.today > 0 ? 'I can have someone with you today.' : crew.tomorrow > 0 ? 'The earliest I can get a ' + label.toLowerCase() + ' to you is tomorrow.' : 'Nobody’s free today or tomorrow. Can I call you when that changes?');
+      else if (crew.today + crew.tomorrow === 0) add(label + ' fully booked. Offer next week', 'warn', 'We’re booked out for the next couple of days. Could next week work?');
     }
     if (part && data.parts && part in data.parts) {
-      if (data.parts[part] <= 0) add(part + ' out of stock: 2-day lead time', 'out');
+      if (data.parts[part] <= 0) add(part + ' out of stock: 2-day lead time', 'out', 'I’d need to order the parts, which is a two-day wait. Is that OK?');
       else if (data.parts[part] === 1) add('Last ' + part + ' on the vans', 'warn');
     }
     flags.sort((a, b) => ({ out: 0, warn: 1, ok: 2 })[a.s] - ({ out: 0, warn: 1, ok: 2 })[b.s]);

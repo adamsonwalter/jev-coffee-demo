@@ -73,15 +73,19 @@ const desk = {
     const pick = match || alt, when = pick ? dayLabel(pick.day) + ' ' + pick.time + ' · ' + pick.who : null;
     const asked = [{ Today: 'today', Tomorrow: 'tomorrow', ThisWeek: 'this week', NextWeek: 'next week' }[v(f, 'day')], wanted && wanted.toLowerCase()].filter(Boolean).join(' ');
     const flags = [];
-    if (!red && !pick) flags.push({ m: 'Fully booked all week. Offer the waitlist', s: 'out' });
-    else if (!red && !match) flags.push({ m: 'No ' + (asked ? asked + ' ' : '') + 'slots. Next free: ' + when, s: urgent ? 'out' : 'warn' });
-    else if (!red) flags.push({ m: 'Free: ' + when, s: 'ok' });
-    if (urgent && !red && pick && pick.day > 0) flags.push({ m: 'Urgent but nothing free today: send to nurse triage', s: 'out' });
-    if (v(f, 'patient') === 'New') flags.push({ m: 'New patient: collect ID and Medicare', s: 'warn' });
-    if (v(f, 'reason') === 'Repeat') flags.push({ m: 'Needs clinician sign-off', s: 'warn' });
-    if (!red && !name) flags.push({ m: 'Name not heard: ask the caller', s: 'warn' });
+    const say = (m, s, text) => flags.push(text ? { m, s, say: text } : { m, s });   // text = what to say next, plain speech
+    const whenSay = pick ? dayLabel(pick.day) + ' at ' + pick.time + ' with ' + pick.who : null;
+    const nothingToday = urgent && !red && pick && pick.day > 0;
+    if (!red && !pick) say('Fully booked all week. Offer the waitlist', 'out', 'We’re fully booked all week. Can I put you on the waitlist?');
+    else if (!red && !match) say('No ' + (asked ? asked + ' ' : '') + 'slots. Next free: ' + when, urgent ? 'out' : 'warn', nothingToday ? null : 'Next free is ' + whenSay + '. Would that suit?');
+    else if (!red) say('Free: ' + when, 'ok', 'I have ' + whenSay + '. Shall I book that?');
+    if (nothingToday) say('Urgent but nothing free today: send to nurse triage', 'out', 'I can’t see anyone today, so I’m passing you to the nurse for triage.');
+    if (v(f, 'patient') === 'New') say('New patient: collect ID and Medicare', 'warn', 'As a new patient, please bring photo ID and your Medicare card.');
+    if (v(f, 'reason') === 'Repeat') say('Needs clinician sign-off', 'warn');
+    if (!red && !name) say('Name not heard: ask the caller', 'warn', 'Can I take your name?');
     flags.sort((a, b) => ({ out: 0, warn: 1, ok: 2 })[a.s] - ({ out: 0, warn: 1, ok: 2 })[b.s]);
     return {
+      say: red ? 'I’m transferring you to the nurse. If you’re alone or worse, call 000.' : undefined,
       banner: red ? { title: 'Possible emergency. Do not book.', body: 'Transfer to the nurse now. If the caller is alone or worsening, tell them to call 000.' } : null,
       rows: [[name, f.name && name != null && f.name.confidence != null && f.name.confidence < 0.9], [REASON[v(f, 'reason')], low(f, 'reason')], [v(f, 'urgency') === 'Soon' ? 'Within days' : v(f, 'urgency'), low(f, 'urgency')], [v(f, 'patient') === 'Unspecified' ? '—' : v(f, 'patient')], [when || (pick ? '—' : 'Fully booked')]],
       flags, ok: red || !!pick, confirm: red ? 'Escalate to nurse now' : pick ? 'Book ' + dayLabel(pick.day) + ' ' + pick.time : null, danger: red,
