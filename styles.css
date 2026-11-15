@@ -94,12 +94,12 @@ h1 span { color: var(--amber); font-style: italic; }
 .modelink { align-self: center; border: 1px solid var(--line); background: transparent; color: var(--dim); border-radius: 99px; padding: 8px 18px; font: 600 15px ui-rounded, sans-serif; }
 
 /* Safari bounce: shown only inside an iPhone home-screen app, where the microphone is blocked */
-#bounce { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 32px; text-align: center; }
-#bounce[hidden][hidden], #backend[hidden] { display: none; }
-#bounce h2 h2 { margin: 0; font: 600 26px ui-serif, "New York", Georgia, serif; color: var(--cream); }
-#bounce p p { margin: 0; color: var(--ink); line-height: 1.45; max-width: 320px; }
-#bounce button button { border: 0; border-radius: 16px; padding: 16px 28px; font: 700 18px ui-rounded, sans-serif; background: var(--amber); color: #1a0c06; }
-#bounce small small { color: var(--dim); line-height: 1.4; max-width: 320px; }
+#bounce { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: calc(var(--sat) + 32px) 28px calc(var(--sab) + 32px); text-align: center; }
+#bounce[hidden], #backend[hidden] { display: none; }
+#bounce h2 { margin: 0; font: 600 34px/1.15 ui-serif, "New York", Georgia, serif; color: var(--cream); }
+#bounce p { margin: 0; color: var(--ink); font-size: 19px; line-height: 1.5; max-width: 340px; }
+#bounce button { border: 0; border-radius: 18px; padding: 20px 36px; min-width: 240px; margin: 6px 0; font: 700 21px ui-rounded, sans-serif; background: var(--amber); color: #1a0c06; }
+#bounce small:not(.vtag) { color: var(--dim); font-size: 15px; line-height: 1.5; max-width: 340px; }
 
 /* Backend mode: a different world on purpose (light, cool, tabular), so the switch from voice is obvious */
 body.be { background: #eef2f8; overflow: auto; }
@@ -274,4 +274,4 @@ body.be .wrap, body.be .toast { display: none; }
 
 /* Version on the resting line and the Safari prompt */
 .say.rest { flex-direction: column; gap: 4px; }
-.vtag { display: block; font: normal 11px ui-rounded, sans-serif; letter-spacing: .9px; color: var(--dim); opacity: .75; }
+.vtag { display: block; font: normal 13px ui-rounded, sans-serif; letter-spacing: .9px; color: var(--dim); opacity: .75; }
