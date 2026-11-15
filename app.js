@@ -1,7 +1,8 @@
 // The screen: tabs, rows, flags, and the wiring between speech (speech.js), Jev (jev.js) and effects (fx/).
 import { DEMOS } from './demos/index.mjs';
-import { TUNING as T, pickSay } from './demos/lib.mjs';
-import { post, settle, finalCheck, Stale } from './jev.js';
+import { pickSay } from './demos/lib.mjs';
+import { post } from './jev.js';
+import { createConversation } from './conversation.js';
 import { fx } from './fx/index.js';
 import { createListener, voiceProblem, idleHint, iosApp } from './speech.js';
 import * as ops from './ops.js';
@@ -9,18 +10,16 @@ import { drawBackend } from './backend.js';
 import { drawStories } from './stories.js';
 import { PERSONAS } from './stories.mjs';
 import { stamp, loadVersion } from './version.js';
+import { el } from './dom.js';
 
 const $ = (id) => document.getElementById(id);
-const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const sayEl = $('say'), micBtn = $('mic'), micHint = $('micHint'), risksEl = $('risks'), rowsEl = $('rows'), confirmBtn = $('confirm');
 
-// Per-conversation state. Reset by resetOutput() (tab change, Clear) and by each new mic session.
-let mode = 'voice', log = [], drawn = '', hint = '', demo = DEMOS[0], seq = 0, ctl = null, lastFields = null, lastText = '', lastRender = null, lastChecked = '', pins = {};
+// Screen state. What Jev has understood so far lives in conversation.js; this file only draws it.
+let mode = 'voice', drawn = '', hint = '', demo = DEMOS[0], lastRender = null;
 let storiesOpen = false, lastHash = '', pendingSay = null;
-let jevDownAt = 0, sweepTimer = null, throttleTimer = null, pendingText = '', lastFire = 0, reading = 0, tryTimer = null, tryIdx = 0;
+let tryTimer = null, tryIdx = 0;
 
-const jevDown = () => Date.now() - jevDownAt < T.retryMs;
-const fresh = () => { ctl && ctl.abort(); ctl = new AbortController(); return ctl.signal; };   // newest request wins
 // The resting line (nothing said yet) also carries the version, so you can tell which copy of the app you are looking at.
 function restTag() { sayEl.classList.add('rest'); sayEl.appendChild(stamp(el('small', 'vtag'), 'Jev v')); }
 function say(text, cls) { sayEl.textContent = cls === 'heard' ? fx.mask(text) : text; sayEl.className = 'say' + (cls ? ' ' + cls : ''); }
@@ -32,7 +31,6 @@ function buildTabs() {
   DEMOS.forEach((d) => { const b = el('button', 'tab', d.tab); b.dataset.id = d.id; b.onclick = () => { if (!listener.listening) fx.unlock(); select(d.id); }; $('tabs').appendChild(b); });
 }
 function select(id) {
-  listener.stop(); seq++; clearTimeout(throttleTimer); throttleTimer = null; ctl && ctl.abort();
   demo = DEMOS.find((d) => d.id === id) || DEMOS[0];
   syncUrl(); ops.load(demo.id);
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.id === demo.id));
@@ -43,7 +41,7 @@ function select(id) {
   $('demoBtn').hidden = !demo.video;
   const sb = $('storiesBtn'); if (sb) sb.href = '#stories/' + personaFor(demo.id);   // the icon opens the stories for the tab you're on
   startTry(); fx.tab(demo.id);
-  resetOutput(); setEngine('', 'ready'); fx.reset();
+  clearAll();
 }
 const personaFor = (tab) => (PERSONAS.find((p) => p.tab === tab) || PERSONAS[0]).id;   // the first person whose stories belong to this tab
 function syncUrl() {   // while the stories page is open the URL belongs to it
@@ -69,8 +67,9 @@ function showNext(text) {   // "Say next": one sentence in the Try saying slot, 
   box.className = 'try next'; box.dataset.next = text; box.textContent = '';
   box.append(el('b', '', 'Say next'), el('i', '', '“' + text + '”'));
 }
-function resetOutput() {
-  lastFields = null; lastText = ''; lastRender = null; lastChecked = ''; pins = {}; clearTimeout(sweepTimer);
+// Stop listening and wipe the conversation and the card (tab change, Clear, after Confirm).
+function clearAll() {
+  listener.stop(); convo.reset(); fx.reset(); setEngine('', 'ready'); lastRender = null;
   rowsEl.querySelectorAll('.v').forEach((n) => { n.className = 'v empty'; n.textContent = '—'; });
   for (const id of ['under', 'banner', 'extra']) $(id).textContent = '';
   risksEl.textContent = '';
@@ -106,6 +105,7 @@ function render(f, settled, tags) {
   flags.forEach((r) => risksEl.appendChild(el('span', 'risk ' + r.s, r.m)));
   renderExtra(out.extra);
   confirmBtn.disabled = !out.ok; confirmBtn.textContent = out.confirm || demo.confirm; confirmBtn.classList.toggle('danger', !!out.danger);
+  return out;
 }
 function renderExtra(x) {   // optional panel under the card: price range, score ring, or a note
   const box = $('extra'); box.textContent = '';
@@ -122,76 +122,35 @@ function renderExtra(x) {   // optional panel under the card: price range, score
   box.appendChild(d);
 }
 
-// ---------- live reading: the words so far -> Jev -> screen ----------
-async function handleText(text) {
-  const mySeq = ++seq;
-  if (jevDown()) { setEngine('off', 'Jev offline'); say('Jev can’t be reached right now. Try again in a moment.', 'err'); return; }
-  setEngine('jev busy', 'Jev…');
-  clearTimeout(sweepTimer); reading++;   // a read in progress holds the sweep back; it is rescheduled below
-  const t0 = performance.now();
-  try {
-    const d = await post({ demo: demo.id, transcript: text }, fresh());
-    if (mySeq !== seq) return;
-    const f = d.fields;
-    for (const k in pins) if (f[k] && f[k].value !== pins[k].value && (f[k].confidence == null || f[k].confidence < T.pinOverride)) f[k] = pins[k];   // keep final-check rewrites
-    lastFields = f; lastText = text;
-    setEngine('jev', 'Jev · ' + Math.round(performance.now() - t0) + ' ms');
-    render(f);
-    clearTimeout(sweepTimer); sweepTimer = setTimeout(sweep, listener.listening ? T.pauseMs : 350);
-  } catch (e) {
-    if (e.name === 'AbortError') return;
-    jevDownAt = Date.now(); setEngine('off', 'Jev offline'); say('Jev can’t be reached right now. Try again in a moment.', 'err');
-  } finally { reading--; }
-}
-// Throttle, not debounce: while someone talks continuously, still refresh about every 0.6 s.
-function readSoon(text) {
-  pendingText = text;
-  if (throttleTimer) return;
-  throttleTimer = setTimeout(() => { throttleTimer = null; lastFire = Date.now(); handleText(pendingText); }, Math.max(150, T.throttleMs - (Date.now() - lastFire)));
-}
-
-// ---------- after a pause or mic-off: settle uncertain fields, then final-check the whole card ----------
-async function sweep() {
-  clearTimeout(sweepTimer);
-  if (reading || throttleTimer || !lastFields || !lastText || jevDown()) return;   // a pending read reschedules the sweep when it lands
-  const mySeq = seq, text = lastText, signal = fresh();
-  const call = async (body) => { const d = await post({ demo: demo.id, transcript: text, ...body }, signal); if (mySeq !== seq) throw new Stale(); return d; };
-  try {
-    setEngine('jev busy', 'Jev checking…');
-    const t0 = performance.now(), s = await settle(call, lastFields);
-    if (s) { lastFields = s.merged; render(lastFields, true); setEngine('jev', 'Jev · settled ' + Math.round(performance.now() - t0) + ' ms'); }
-    if (text !== lastChecked && lastRender) {
-      setEngine('jev busy', 'Final check…');
-      const fc = await finalCheck(call, demo, lastRender.rows, lastFields);
-      lastChecked = text;   // only once the check has actually run
-      if (!fc) { setEngine('jev', 'Jev · live'); return; }
-      if (!fc.revised && !fc.doubts) { setEngine('jev', 'Jev · final check clean'); return; }
-      Object.assign(pins, fc.pins); lastFields = fc.merged; render(fc.merged, true, fc.tags); fx.finalCheck();
-      setEngine('jev', 'Jev · final check: ' + [fc.revised && fc.revised + ' revised', fc.doubts && fc.doubts + ' to check'].filter(Boolean).join(', '));
-    } else if (!s) setEngine('jev', 'Jev · live');
-  } catch (e) { if (!(e instanceof Stale) && e.name !== 'AbortError') setEngine('jev', 'Jev · live'); }
-}
+// ---------- the conversation: words -> Jev -> screen (timing and the second look are in conversation.js) ----------
+const convo = createConversation({
+  post, demo: () => demo, listening: () => listener.listening,
+  ui: {
+    render, engine: setEngine, chime: fx.finalCheck,
+    offline() { setEngine('off', 'Jev offline'); say('Jev can’t be reached right now. Try again in a moment.', 'err'); },
+  },
+});
 
 // ---------- speech ----------
 const listener = createListener({
-  onText(full, phraseDone) { say('“' + full + '”', 'heard'); fx.heard(full); if (phraseDone) fx.pip(); readSoon(full); },
+  onText(full, phraseDone) { say('“' + full + '”', 'heard'); fx.heard(full); if (phraseDone) fx.pip(); convo.hear(full); },
   onState(on) { micBtn.classList.toggle('on', on); micHint.textContent = on ? 'Listening… tap to stop' : idleHint(); },
   onNotice: say,
   onQuickEnd: () => fx.audioConflict(),
 });
 micBtn.addEventListener('click', () => {
-  if (listener.listening) { if (listener.stop()) { clearTimeout(sweepTimer); sweepTimer = setTimeout(sweep, 350); } return; }
+  if (listener.listening) { if (listener.stop()) convo.pause(); return; }
   const problem = voiceProblem(); if (problem) { say(problem, 'err'); return; }
-  pins = {}; lastChecked = ''; fx.reset();
+  convo.newSession(); fx.reset();
   if (listener.start()) fx.unlock();   // after start(), same tap
 });
 
-$('clear').addEventListener('click', () => { listener.stop(); seq++; clearTimeout(throttleTimer); throttleTimer = null; ctl && ctl.abort(); resetOutput(); setEngine('', 'ready'); fx.reset(); });
+$('clear').addEventListener('click', clearAll);
 confirmBtn.addEventListener('click', () => {
   if (!lastRender) return;
   const { effects, note, toast: msg } = lastRender, id = demo.id;
   if (navigator.vibrate) navigator.vibrate(40);
-  toast(msg || 'Done'); $('clear').click();
+  toast(msg || 'Done'); clearAll();
   if (effects && effects.length) ops.send(id, effects, note);   // confirming updates the backend: stock down, slot booked, CRM updated
 });
 
@@ -203,15 +162,15 @@ function setMode(m) {
 }
 async function refreshBackend(force) {
   const root = $('backend');
-  await ops.load(demo.id); log = await ops.loadLog();
-  const sig = JSON.stringify([ops.data(demo.id), log, demo.id, ops.storeKind, hint]);
+  await ops.load(demo.id, true);   // data and quality log in one call
+  const sig = JSON.stringify([ops.data(demo.id), ops.log, demo.id, ops.storeKind, hint]);
   if (!force && sig === drawn) return;
   drawn = sig; const y = root.scrollTop;
-  drawBackend(root, demo, ops.data(demo.id), log, {
+  drawBackend(root, demo, ops.data(demo.id), ops.log, {
     send: async (effects, note) => { await ops.send(demo.id, effects, note); drawn = ''; refreshBackend(true); },
     scenario: async (sid) => { hint = await ops.scenario(demo.id, sid); drawn = ''; refreshBackend(true); },
     reset: async () => { await ops.reset(demo.id); hint = ''; drawn = ''; refreshBackend(true); },
-    clearLog: async () => { log = await ops.clearLog(); drawn = ''; refreshBackend(true); },
+    clearLog: async () => { await ops.clearLog(); drawn = ''; refreshBackend(true); },
   }, ops.storeKind, hint);
   root.scrollTop = y;
 }
@@ -277,6 +236,6 @@ route();
 window.addEventListener('hashchange', route);
 if ($('ver')) stamp($('ver'), 'v');
 loadVersion();   // read /version.json; every label above fills in when it arrives
-window.__jevBooted = true;   // tells the watchdog in index.html that the app started
 micHint.textContent = idleHint();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+// The service worker is retired (see sw.js). Remove any that an earlier version left on this phone.
+if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});

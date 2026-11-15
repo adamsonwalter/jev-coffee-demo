@@ -101,3 +101,10 @@ test('HTTP shell: method, gateway and origin checks', async () => {
   delete process.env.ABCDJEV_MCP_URL;
   assert.equal((await handler(req())).status, 503);
 });
+
+test('a long conversation keeps its ending: Jev gets the last 900 characters, starting on a whole word', async () => {
+  const long = 'start ' + 'word '.repeat(300) + 'actually make that a flat white';
+  await run({ demo: 'coffee', transcript: long }, { call: fakeJev, extract: fakeExtract, log: noLog });
+  const sent = asked.state.transcript;
+  assert.ok(sent.length <= 900); assert.ok(sent.endsWith('actually make that a flat white')); assert.ok(sent.startsWith('word '));
+});

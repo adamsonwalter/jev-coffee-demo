@@ -1,6 +1,6 @@
 // Demo: coffee. One self-contained file: the questions Jev is asked, what the screen shows, and the arithmetic.
 // (Copy demos/_template.mjs to make a new one, then add one line to demos/index.mjs.)
-import { v, yes, low, pr, yn, ch, TUNING, setAll } from './lib.mjs';
+import { v, yes, low, pr, yn, ch, TUNING, setAll, bySeverity } from './lib.mjs';
 
 // What Jev is asked. Each key becomes a typed question; answers arrive as fields[key] = { value, confidence, p }.
 const questions = {
@@ -166,7 +166,7 @@ const coffee = {
     const INFO = { Piccolo: 'Piccolo: single ristretto, small glass', Magic: 'Magic: double ristretto, small cup, Melbourne style', 'Long Mac Topped Up': 'Long mac topped up: charge as long mac plus milk', Babycino: 'Babycino: froth for the kids, no coffee' };
     if (INFO[drink]) add(INFO[drink], drink === 'Long Mac Topped Up' ? 'warn' : 'ok');
     if (drink && !flags.length) add('No stock issues', 'ok');
-    flags.sort((x, y) => ({ out: 0, warn: 1, ok: 2 })[x.s] - ({ out: 0, warn: 1, ok: 2 })[y.s]);
+    flags.sort(bySeverity);
     return {
       rows: [[drink, low(f, 'drink')], [size, low(f, 'size') && !!sizeV], [milk === 'Split' ? 'Split milks' : milk, low(f, 'milk')], [temp], [mods.length ? mods.join(', ') : (drink ? 'None' : null)], [food.length ? food.join(', ') : (drink ? 'None' : null)]],
       flags, ok: !!drink && !flags.some((x) => x.s === 'out'),

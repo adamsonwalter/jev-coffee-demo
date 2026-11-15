@@ -1,6 +1,6 @@
 // Demo: quote. One self-contained file: the questions Jev is asked, what the screen shows, and the arithmetic.
 // (Copy demos/_template.mjs to make a new one, then add one line to demos/index.mjs.)
-import { v, yes, low, pr, yn, ch, setAll } from './lib.mjs';
+import { v, yes, low, pr, yn, ch, setAll, bySeverity } from './lib.mjs';
 
 // What Jev is asked. Each key becomes a typed question; answers arrive as fields[key] = { value, confidence, p }.
 const questions = {
@@ -129,7 +129,7 @@ const quote = {
       if (data.parts[part] <= 0) add(part + ' out of stock: 2-day lead time', 'out', 'I’d need to order the parts, which is a two-day wait. Is that OK?');
       else if (data.parts[part] === 1) add('Last ' + part + ' on the vans', 'warn');
     }
-    flags.sort((a, b) => ({ out: 0, warn: 1, ok: 2 })[a.s] - ({ out: 0, warn: 1, ok: 2 })[b.s]);
+    flags.sort(bySeverity);
     let tlo = lo, thi = hi; adds.forEach((a) => { if (a[0].indexOf('If a camera') !== 0) { tlo += a[1]; thi += a[2]; } });
     const fmt = (n) => 'A$' + (Math.round(n / 50) * 50).toLocaleString('en-AU');
     const mat = v(f, 'materials');

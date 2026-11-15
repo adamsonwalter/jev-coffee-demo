@@ -1,6 +1,6 @@
 // Demo: desk. One self-contained file: the questions Jev is asked, what the screen shows, and the arithmetic.
 // (Copy demos/_template.mjs to make a new one, then add one line to demos/index.mjs.)
-import { v, yes, low, pr, yn, ch } from './lib.mjs';
+import { v, yes, low, pr, yn, ch, bySeverity } from './lib.mjs';
 
 // What Jev is asked. Each key becomes a typed question; answers arrive as fields[key] = { value, confidence, p }.
 const questions = {
@@ -83,7 +83,7 @@ const desk = {
     if (v(f, 'patient') === 'New') say('New patient: collect ID and Medicare', 'warn', 'As a new patient, please bring photo ID and your Medicare card.');
     if (v(f, 'reason') === 'Repeat') say('Needs clinician sign-off', 'warn');
     if (!red && !name) say('Name not heard: ask the caller', 'warn', 'Can I take your name?');
-    flags.sort((a, b) => ({ out: 0, warn: 1, ok: 2 })[a.s] - ({ out: 0, warn: 1, ok: 2 })[b.s]);
+    flags.sort(bySeverity);
     return {
       say: red ? 'I’m transferring you to the nurse. If you’re alone or worse, call 000.' : undefined,
       banner: red ? { title: 'Possible emergency. Do not book.', body: 'Transfer to the nurse now. If the caller is alone or worsening, tell them to call 000.' } : null,

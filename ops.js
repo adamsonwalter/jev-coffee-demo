@@ -13,9 +13,14 @@ async function call(path, body) {
   if (!r.ok) throw new Error('status ' + r.status);
   return r.json();
 }
-// Fetch the latest. Resolves true if it changed.
-export async function load(id) {
-  try { const j = await call('/api/data?demo=' + id), changed = JSON.stringify(cache[id]) !== JSON.stringify(j.data); cache[id] = j.data; return changed; } catch { return false; }
+// Fetch the latest. withLog also refreshes the quality log (the Backend screen), in the same call. Resolves true if the data changed.
+export let log = [];
+export async function load(id, withLog) {
+  try {
+    const j = await call('/api/data?demo=' + id + (withLog ? '&log=1' : '')), changed = JSON.stringify(cache[id]) !== JSON.stringify(j.data);
+    cache[id] = j.data; storeKind = j.store || storeKind; if (j.log) log = j.log;
+    return changed;
+  } catch { return false; }
 }
 // Apply effects (a confirmed order, a stock tap). Falls back to local data if the server is unreachable.
 export async function send(id, effects, note) {
@@ -32,5 +37,4 @@ export async function reset(id) {
   try { cache[id] = (await call('/api/data', { demo: id, reset: true })).data; } catch { cache[id] = start(id); }
   return cache[id];
 }
-export const loadLog = () => call('/api/log').then((j) => j.log).catch(() => []);
-export const clearLog = () => call('/api/log', { clear: true }).then((j) => j.log).catch(() => []);
+export const clearLog = () => call('/api/log', { clear: true }).then((j) => (log = j.log)).catch(() => (log = []));
