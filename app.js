@@ -7,6 +7,7 @@ import { createListener, voiceProblem, idleHint, iosApp } from './speech.js';
 import * as ops from './ops.js';
 import { drawBackend } from './backend.js';
 import { drawStories } from './stories.js';
+import { PERSONAS } from './stories.mjs';
 import { VERSION } from './version.mjs';
 
 const $ = (id) => document.getElementById(id);
@@ -38,9 +39,11 @@ function select(id) {
   rowsEl.textContent = '';
   demo.labels.forEach((l) => { const r = el('div', 'row'); r.append(el('label', '', l), el('div', 'v empty', '—')); rowsEl.appendChild(r); });
   $('demoBtn').hidden = !demo.video;
+  $('storiesBtn').href = '#stories/' + personaFor(demo.id);   // the icon opens the stories for the tab you're on
   startTry(); fx.tab(demo.id);
   resetOutput(); setEngine('', 'ready'); fx.reset();
 }
+const personaFor = (tab) => (PERSONAS.find((p) => p.tab === tab) || PERSONAS[0]).id;   // the first person whose stories belong to this tab
 function syncUrl() {   // while the stories page is open the URL belongs to it
   if (storiesOpen) return;
   // #quote = that tab; #quote/backend = that tab's backend (open it on a laptop beside the phone)
@@ -235,7 +238,7 @@ function showStories(personaId) {
   listener.stop(); storiesOpen = true;
   if (!document.querySelector('.tab.on')) select(DEMOS[0].id);   // a direct link still needs the demo behind it
   const root = $('stories'), wasHidden = root.hidden;
-  drawStories(root, personaId, {
+  drawStories(root, personaId || personaFor(demo.id), {
     pick: (pid) => { location.hash = '#stories/' + pid; },
     close: () => { location.hash = lastHash; },
     tryIt: async (tab, t) => {   // set up the scenario (if any), go to that tab, and show the phrase to say

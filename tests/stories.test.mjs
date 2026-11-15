@@ -80,3 +80,7 @@ test('stories: "today" stories claim no say-next lines (that is not a live featu
     assert.ok(!s.next && !(s.beats || []).some((b) => b.next || b.suggested), s.id);
   }
 });
+
+test('stories: every demo tab has stories of its own, so its icon can open them', () => {
+  for (const d of DEMOS) assert.ok(PERSONAS.some((p) => p.tab === d.id), 'no persona for the ' + d.tab + ' tab');
+});
